@@ -63,7 +63,8 @@
       gap: 4px;
     }
 
-    #controls input[type="date"] {
+    #controls input[type="date"],
+    #controls select {
       background: #111;
       border: 1px solid #333;
       color: #fff;
@@ -151,6 +152,17 @@
           Date:
           <input type="date" id="datePicker" />
         </label>
+        <label>
+          Time flow:
+          <select id="speedSelect">
+            <option value="realtime">Real-time</option>
+            <option value="hour">1 hour / sec</option>
+            <option value="day">1 day / sec</option>
+            <option value="month">1 month / sec</option>
+            <option value="year">1 year / sec</option>
+            <option value="century">1 century / sec</option>
+          </select>
+        </label>
         <button id="todayBtn">Today (Live)</button>
         <span class="zoom-label">Zoom:</span>
         <button id="zoomIn">+</button>
@@ -170,111 +182,192 @@
     const todayBtn = document.getElementById('todayBtn');
     const zoomInBtn = document.getElementById('zoomIn');
     const zoomOutBtn = document.getElementById('zoomOut');
+    const speedSelect = document.getElementById('speedSelect');
 
-    let selectedDate = null; // if null => use real-time
+    let selectedDate = null;      // if null + realtime => true live mode
     let zoomFactor = 1.0;
+    let simJD = null;             // simulation Julian date (for non-live modes)
+    let lastFrameTime = null;     // for dt calc
+    let speedMode = 'realtime';
 
     function resizeCanvas() {
       const size = Math.min(window.innerWidth, window.innerHeight) * 0.8;
       canvas.width = size;
       canvas.height = size;
     }
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      lastFrameTime = null;
+    });
     resizeCanvas();
 
+    // Julian date from JS Date (UTC)
+    function getJulianDate(date) {
+      return date.getTime() / 86400000 + 2440587.5;
+    }
+
     /*
-      Planet data:
-      - au: semi-major axis in AU
-      - periodYears: orbital period in Earth years
-      - radiusKm: approximate physical radius in km
-      - faceType: associated Platonic solid face type
+      Planet config:
+      - For Mercury–Neptune we use JPL approximate Keplerian elements (Table 1, J2000 frame).
+      - Pluto is treated with a simpler circular model (approx).
     */
-    const planets = [
+
+    const planetConfigs = [
       {
         name: 'Sun',
         color: '#ffd700',
-        au: 0,
-        periodYears: 0,
+        type: 'star',
         radiusKm: 696340,
-        faceType: null
+        faceType: null,
+        meanAU: 0
       },
       {
         name: 'Mercury',
         color: '#c0c0c0',
-        au: 0.39,
-        periodYears: 0.24,
+        type: 'kepler',
         radiusKm: 2440,
-        faceType: 'triangle'
+        faceType: 'triangle',
+        meanAU: 0.38709927
       },
       {
         name: 'Venus',
         color: '#ffbf7f',
-        au: 0.72,
-        periodYears: 0.62,
+        type: 'kepler',
         radiusKm: 6052,
-        faceType: 'square'
+        faceType: 'square',
+        meanAU: 0.72333566
       },
       {
         name: 'Earth',
         color: '#4cc9f0',
-        au: 1.0,
-        periodYears: 1.0,
+        type: 'kepler',
         radiusKm: 6371,
-        faceType: 'pentagon'
+        faceType: 'pentagon',
+        meanAU: 1.00000261
       },
       {
         name: 'Mars',
         color: '#ff6b6b',
-        au: 1.52,
-        periodYears: 1.88,
+        type: 'kepler',
         radiusKm: 3390,
-        faceType: 'triangle'
+        faceType: 'triangle',
+        meanAU: 1.52371034
       },
       {
         name: 'Jupiter',
         color: '#ffdd99',
-        au: 5.20,
-        periodYears: 11.86,
+        type: 'kepler',
         radiusKm: 69911,
-        faceType: 'square'
+        faceType: 'square',
+        meanAU: 5.20288700
       },
       {
         name: 'Saturn',
         color: '#f4e285',
-        au: 9.54,
-        periodYears: 29.46,
+        type: 'kepler',
         radiusKm: 58232,
-        faceType: 'pentagon'
+        faceType: 'pentagon',
+        meanAU: 9.53667594
       },
       {
         name: 'Uranus',
         color: '#7fffd4',
-        au: 19.19,
-        periodYears: 84.01,
+        type: 'kepler',
         radiusKm: 25362,
-        faceType: 'triangle'
+        faceType: 'triangle',
+        meanAU: 19.18916464
       },
       {
         name: 'Neptune',
         color: '#6c5ce7',
-        au: 30.07,
-        periodYears: 164.8,
+        type: 'kepler',
         radiusKm: 24622,
-        faceType: 'square'
+        faceType: 'square',
+        meanAU: 30.06992276
       },
       {
         name: 'Pluto',
         color: '#b388ff',
-        au: 39.48,
-        periodYears: 248.0,
+        type: 'plutoSimple',
         radiusKm: 1188,
-        faceType: 'pentagon'
+        faceType: 'pentagon',
+        meanAU: 39.48,
+        periodYears: 248,
+        phaseDeg0: 238   // arbitrary phase for aesthetic; not precise
       }
     ];
 
+    // Keplerian elements (JPL Approx Positions Table 1, 1800–2050, J2000 frame)
+    const keplerElements = {
+      Mercury: {
+        a0: 0.38709927,  aDot: 0.00000037,
+        e0: 0.20563593,  eDot: 0.00001906,
+        I0: 7.00497902,  IDot: -0.00594749,
+        L0: 252.25032350, LDot: 149472.67411175,
+        wBar0: 77.45779628, wBarDot: 0.16047689,
+        Omega0: 48.33076593, OmegaDot: -0.12534081
+      },
+      Venus: {
+        a0: 0.72333566,  aDot: 0.00000390,
+        e0: 0.00677672,  eDot: -0.00004107,
+        I0: 3.39467605,  IDot: -0.00078890,
+        L0: 181.97909950, LDot: 58517.81538729,
+        wBar0: 131.60246718, wBarDot: 0.00268329,
+        Omega0: 76.67984255, OmegaDot: -0.27769418
+      },
+      Earth: { // Earth-Moon barycenter
+        a0: 1.00000261,  aDot: 0.00000562,
+        e0: 0.01671123,  eDot: -0.00004392,
+        I0: -0.00001531, IDot: -0.01294668,
+        L0: 100.46457166, LDot: 35999.37244981,
+        wBar0: 102.93768193, wBarDot: 0.32327364,
+        Omega0: 0.0,        OmegaDot: 0.0
+      },
+      Mars: {
+        a0: 1.52371034,  aDot: 0.00001847,
+        e0: 0.09339410,  eDot: 0.00007882,
+        I0: 1.84969142,  IDot: -0.00813131,
+        L0: -4.55343205, LDot: 19140.30268499,
+        wBar0: -23.94362959, wBarDot: 0.44441088,
+        Omega0: 49.55953891, OmegaDot: -0.29257343
+      },
+      Jupiter: {
+        a0: 5.20288700,  aDot: -0.00011607,
+        e0: 0.04838624,  eDot: -0.00013253,
+        I0: 1.30439695,  IDot: -0.00183714,
+        L0: 34.39644051, LDot: 3034.74612775,
+        wBar0: 14.72847983, wBarDot: 0.21252668,
+        Omega0: 100.47390909, OmegaDot: 0.20469106
+      },
+      Saturn: {
+        a0: 9.53667594,  aDot: -0.00125060,
+        e0: 0.05386179,  eDot: -0.00050991,
+        I0: 2.48599187,  IDot: 0.00193609,
+        L0: 49.95424423, LDot: 1222.49362201,
+        wBar0: 92.59887831, wBarDot: -0.41897216,
+        Omega0: 113.66242448, OmegaDot: -0.28867794
+      },
+      Uranus: {
+        a0: 19.18916464,  aDot: -0.00196176,
+        e0: 0.04725744,   eDot: -0.00004397,
+        I0: 0.77263783,   IDot: -0.00242939,
+        L0: 313.23810451, LDot: 428.48202785,
+        wBar0: 170.95427630, wBarDot: 0.40805281,
+        Omega0: 74.01692503, OmegaDot: 0.04240589
+      },
+      Neptune: {
+        a0: 30.06992276,  aDot: 0.00026291,
+        e0: 0.00859048,   eDot: 0.00005105,
+        I0: 1.77004347,   IDot: 0.00035372,
+        L0: -55.12002969, LDot: 218.45945325,
+        wBar0: 44.96476227, wBarDot: -0.32241464,
+        Omega0: 131.78422574, OmegaDot: -0.00508664
+      }
+    };
+
     // Legend
     const legend = document.getElementById('legend');
-    planets.forEach(p => {
+    planetConfigs.forEach(p => {
       const item = document.createElement('div');
       item.className = 'legend-item';
       const dot = document.createElement('div');
@@ -286,36 +379,72 @@
       legend.appendChild(item);
     });
 
-    // Event listeners for controls
+    // Controls
     datePicker.addEventListener('change', () => {
       if (datePicker.value) {
-        // interpret as UTC midnight
         selectedDate = new Date(datePicker.value + 'T00:00:00Z');
+        simJD = getJulianDate(selectedDate);
       } else {
         selectedDate = null;
+        simJD = null;
       }
+      lastFrameTime = null;
     });
 
     todayBtn.addEventListener('click', () => {
       selectedDate = null;
       datePicker.value = '';
+      simJD = null;
+      lastFrameTime = null;
     });
 
     zoomInBtn.addEventListener('click', () => {
       zoomFactor *= 1.2;
       if (zoomFactor > 8) zoomFactor = 8;
+      lastFrameTime = null;
     });
 
     zoomOutBtn.addEventListener('click', () => {
       zoomFactor /= 1.2;
       if (zoomFactor < 0.2) zoomFactor = 0.2;
+      lastFrameTime = null;
     });
 
-    // Real-time scaling: one Earth year in seconds
-    const SECONDS_PER_EARTH_YEAR = 365.25 * 24 * 3600;
+    speedSelect.addEventListener('change', () => {
+      speedMode = speedSelect.value;
+      lastFrameTime = null;
+    });
 
-    // Choose a reference epoch (J2000-ish)
-    const epoch = new Date('2000-01-01T12:00:00Z').getTime() / 1000;
+    // J2000 epoch (Terrestrial Time) in Julian days
+    const JD_J2000 = 2451545.0;
+    const SECONDS_PER_DAY = 86400;
+
+    function getSpeedDaysPerSecond(mode) {
+      switch (mode) {
+        case 'hour':    return 1 / 24;
+        case 'day':     return 1;
+        case 'month':   return 30;
+        case 'year':    return 365.25;
+        case 'century': return 36525;
+        case 'realtime':
+        default:        return 1 / 86400; // unused in live mode, but fine for sim
+      }
+    }
+
+    // Planet dot radius scaling
+    const earthRadiusKm = 6371;
+    const minDotPx = 2.0;
+    const maxDotPx = 10.0;
+
+    function getPlanetDotRadius(planet) {
+      if (planet.name === 'Sun') return 8;
+      const ratio = planet.radiusKm / earthRadiusKm;
+      const scaled = Math.cbrt(ratio);
+      let px = 3 * scaled;
+      if (px < minDotPx) px = minDotPx;
+      if (px > maxDotPx) px = maxDotPx;
+      return px;
+    }
 
     function getSidesFromFace(faceType) {
       if (faceType === 'triangle') return 3;
@@ -324,23 +453,63 @@
       return 0;
     }
 
-    // Precompute relative planet size scaling (physically informed but visually usable)
-    const earthRadiusKm = 6371;
-    const minDotPx = 2.0;
-    const maxDotPx = 10.0;
-
-    function getPlanetDotRadius(planet) {
-      if (planet.name === 'Sun') {
-        // keep the Sun small but distinct
-        return 8;
+    // Solve Kepler's equation (radians)
+    function solveKepler(M, e) {
+      let E = M;
+      for (let i = 0; i < 6; i++) {
+        const f = E - e * Math.sin(E) - M;
+        const fPrime = 1 - e * Math.cos(E);
+        E = E - f / fPrime;
       }
-      const ratio = planet.radiusKm / earthRadiusKm; // relative to Earth
-      // use cube-root to compress extremes
-      const scaled = Math.cbrt(ratio);
-      let px = 3 * scaled;
-      if (px < minDotPx) px = minDotPx;
-      if (px > maxDotPx) px = maxDotPx;
-      return px;
+      return E;
+    }
+
+    // Get heliocentric position (x,y) in AU for a Kepler planet at given JD
+    function getKeplerXY(name, jd) {
+      const el = keplerElements[name];
+      const T = (jd - JD_J2000) / 36525.0; // centuries since J2000
+
+      const a = el.a0 + el.aDot * T;
+      const e = el.e0 + el.eDot * T;
+      const I = (el.I0 + el.IDot * T) * Math.PI / 180;
+      const L = (el.L0 + el.LDot * T) * Math.PI / 180;
+      const wBar = (el.wBar0 + el.wBarDot * T) * Math.PI / 180;
+      const Omega = (el.Omega0 + el.OmegaDot * T) * Math.PI / 180;
+
+      const omega = wBar - Omega;
+      let M = L - wBar; // mean anomaly (rad), simplified (Table 1)
+      // Normalize to [-pi, pi]
+      M = ((M + Math.PI) % (2 * Math.PI)) - Math.PI;
+
+      const E = solveKepler(M, e);
+
+      const xPrime = a * (Math.cos(E) - e);
+      const yPrime = a * Math.sqrt(1 - e * e) * Math.sin(E);
+
+      const cosO = Math.cos(Omega), sinO = Math.sin(Omega);
+      const cosI = Math.cos(I),     sinI = Math.sin(I);
+      const cosW = Math.cos(omega), sinW = Math.sin(omega);
+
+      const x1 =  cosW * xPrime - sinW * yPrime;
+      const y1 =  sinW * xPrime + cosW * yPrime;
+
+      const xEcl = x1 * cosO - y1 * sinO * cosI;
+      const yEcl = x1 * sinO + y1 * cosO * cosI;
+      // zEcl exists but we ignore for now
+
+      return { x: xEcl, y: yEcl, a: a };
+    }
+
+    function getPlutoXY(config, jd) {
+      const Tyears = (jd - JD_J2000) / 365.25;
+      const angleDeg = config.phaseDeg0 + (360 * Tyears / config.periodYears);
+      const angle = angleDeg * Math.PI / 180;
+      const r = config.meanAU;
+      return {
+        x: r * Math.cos(angle),
+        y: r * Math.sin(angle),
+        a: config.meanAU
+      };
     }
 
     function draw() {
@@ -349,13 +518,33 @@
       const cx = w / 2;
       const cy = h / 2;
 
-      const now = new Date();
-      const activeDate = selectedDate || now;
-      const tSeconds = activeDate.getTime() / 1000;
+      const nowPerf = performance.now() / 1000;
+      if (lastFrameTime === null) lastFrameTime = nowPerf;
+      const dtReal = nowPerf - lastFrameTime;
+      lastFrameTime = nowPerf;
+
+      let jd;
+
+      // Live mode: no selected date + realtime speed
+      if (!selectedDate && speedMode === 'realtime') {
+        jd = getJulianDate(new Date());
+        simJD = null;
+      } else {
+        if (simJD === null) {
+          simJD = getJulianDate(selectedDate || new Date());
+        }
+        const daysPerSec = getSpeedDaysPerSecond(speedMode);
+        simJD += dtReal * daysPerSec;
+        jd = simJD;
+      }
 
       ctx.clearRect(0, 0, w, h);
 
-      // Glow around the center (Sun)
+      // Scaling AU -> pixels (up to ~50 AU)
+      const maxAU = 50;
+      const scale = (Math.min(cx, cy) - 40) * zoomFactor / maxAU;
+
+      // Central glow (Sun)
       const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80 * zoomFactor);
       glow.addColorStop(0, 'rgba(255, 215, 0, 0.6)');
       glow.addColorStop(0.4, 'rgba(255, 215, 0, 0.15)');
@@ -365,71 +554,75 @@
       ctx.arc(cx, cy, 80 * zoomFactor, 0, Math.PI * 2);
       ctx.fill();
 
-      // AU scaling
-      const nonSunPlanets = planets.filter(p => p.name !== 'Sun');
-      const minAU = Math.min(...nonSunPlanets.map(p => p.au));
-      const maxAU = Math.max(...nonSunPlanets.map(p => p.au));
+      // Precompute heliocentric coords in AU
+      const positions = {};
+      planetConfigs.forEach(p => {
+        if (p.type === 'kepler') {
+          positions[p.name] = getKeplerXY(p.name, jd);
+        } else if (p.type === 'plutoSimple') {
+          positions[p.name] = getPlutoXY(p, jd);
+        }
+      });
 
-      const maxRadiusBase = Math.min(cx, cy) - 40;
-      const minRadiusBase = 40;
-      const scaleBase = (maxRadiusBase - minRadiusBase) / (maxAU - minAU);
+      // Draw orbits (faint circles using meanAU)
+      planetConfigs.forEach(p => {
+        if (p.name === 'Sun') return;
+        const orbitRadiusPx = p.meanAU * scale;
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.15)'; // faint gold
+        ctx.lineWidth = 1;
+        ctx.arc(cx, cy, orbitRadiusPx, 0, Math.PI * 2);
+        ctx.stroke();
+      });
 
-      planets.forEach(planet => {
-        if (planet.name === 'Sun') {
-          // Draw Sun
+      // Draw planets + Platonic polygons
+      planetConfigs.forEach(p => {
+        if (p.name === 'Sun') {
+          const sunRadius = getPlanetDotRadius(p);
           ctx.beginPath();
-          ctx.fillStyle = planet.color;
+          ctx.fillStyle = p.color;
           ctx.shadowBlur = 20;
-          ctx.shadowColor = planet.color;
-          ctx.arc(cx, cy, getPlanetDotRadius(planet), 0, Math.PI * 2);
+          ctx.shadowColor = p.color;
+          ctx.arc(cx, cy, sunRadius, 0, Math.PI * 2);
           ctx.fill();
           ctx.shadowBlur = 0;
           return;
         }
 
-        // Orbital radius from AU, scaled and zoomed
-        const radiusBase = minRadiusBase + (planet.au - minAU) * scaleBase;
-        const radius = radiusBase * zoomFactor;
+        const pos = positions[p.name];
+        const xAU = pos.x;
+        const yAU = pos.y;
+        const rAU = Math.sqrt(xAU * xAU + yAU * yAU);
 
-        // Faint orbit line
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255, 215, 0, 0.15)'; // faint gold
-        ctx.lineWidth = 1;
-        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-        ctx.stroke();
+        const xPx = cx + xAU * scale;
+        const yPx = cy + yAU * scale;
 
-        // Orbital angle: real-time / historical, simplified circular orbit
-        const orbitSeconds = planet.periodYears * SECONDS_PER_EARTH_YEAR;
-        const phase = ((tSeconds - epoch) / orbitSeconds) % 1; // fraction of orbit
-        const angle = phase * Math.PI * 2;
-
-        const x = cx + radius * Math.cos(angle);
-        const y = cy + radius * Math.sin(angle);
-
-        // Platonic face polygon, bright relative to orbit
-        const sides = getSidesFromFace(planet.faceType);
+        // Platonic face polygon: regular polygon in polar coords,
+        // one vertex at the planet position (same radius + angle).
+        const sides = getSidesFromFace(p.faceType);
         if (sides >= 3) {
+          const baseAngle = Math.atan2(yAU, xAU);
           ctx.beginPath();
           ctx.strokeStyle = 'rgba(255, 215, 0, 0.85)'; // brighter gold
           ctx.lineWidth = 0.9;
 
           for (let i = 0; i <= sides; i++) {
-            const theta = angle + (i * 2 * Math.PI / sides);
-            const vx = cx + radius * Math.cos(theta);
-            const vy = cy + radius * Math.sin(theta);
+            const theta = baseAngle + (i * 2 * Math.PI / sides);
+            const vx = cx + rAU * Math.cos(theta) * scale;
+            const vy = cy + rAU * Math.sin(theta) * scale;
             if (i === 0) ctx.moveTo(vx, vy);
             else ctx.lineTo(vx, vy);
           }
           ctx.stroke();
         }
 
-        // Planet dot (scaled)
-        const dotRadius = getPlanetDotRadius(planet);
+        // Planet dot
+        const dotRadius = getPlanetDotRadius(p);
         ctx.beginPath();
-        ctx.fillStyle = planet.color;
+        ctx.fillStyle = p.color;
         ctx.shadowBlur = 8;
-        ctx.shadowColor = planet.color;
-        ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
+        ctx.shadowColor = p.color;
+        ctx.arc(xPx, yPx, dotRadius, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
       });

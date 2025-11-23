@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Orbital Clock</title>
+  <title>Orbital Platonic Clock</title>
   <style>
     html, body {
       margin: 0;
@@ -90,8 +90,10 @@
 <body>
   <div id="wrapper">
     <div>
-      <h1>HELIOS ORBITAL CLOCK</h1>
-      <div id="subtitle">Sun · Mercury · Venus · Earth · Mars · Jupiter · Saturn · Uranus · Neptune · Pluto</div>
+      <h1>HELIOS PLATONIC ORBITAL CLOCK</h1>
+      <div id="subtitle">
+        Sun · Mercury · Venus · Earth · Mars · Jupiter · Saturn · Uranus · Neptune · Pluto
+      </div>
     </div>
     <canvas id="canvas"></canvas>
     <div id="legend"></div>
@@ -101,7 +103,6 @@
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
-    // Resize canvas to be a square using the smallest viewport dimension
     function resizeCanvas() {
       const size = Math.min(window.innerWidth, window.innerHeight) * 0.8;
       canvas.width = size;
@@ -110,81 +111,89 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // Planet data: approximate orbital periods (Earth years) and visual radii (px scale)
+    /*
+      Planet data:
+      - au: semi-major axis in AU (scaled to radius)
+      - periodYears: orbital period in Earth years (for angular speed)
+      - faceType: which Platonic solid face we use in 2D:
+          'triangle'  -> faces of tetrahedron, octahedron, icosahedron
+          'square'    -> faces of cube
+          'pentagon'  -> faces of dodecahedron
+    */
     const planets = [
       {
         name: 'Sun',
         color: '#ffd700',
-        radius: 0,
-        periodYears: 0,           // no orbit
-        polygonSides: 0
+        au: 0,
+        periodYears: 0,
+        faceType: null
       },
       {
         name: 'Mercury',
         color: '#c0c0c0',
-        radius: 40,
+        au: 0.39,
         periodYears: 0.24,
-        polygonSides: 3
+        faceType: 'triangle' // e.g. octahedron face
       },
       {
         name: 'Venus',
         color: '#ffbf7f',
-        radius: 60,
+        au: 0.72,
         periodYears: 0.62,
-        polygonSides: 4
+        faceType: 'square' // e.g. cube face
       },
       {
         name: 'Earth',
         color: '#4cc9f0',
-        radius: 80,
+        au: 1.0,
         periodYears: 1.0,
-        polygonSides: 5
+        faceType: 'pentagon' // e.g. dodecahedron face
       },
       {
         name: 'Mars',
         color: '#ff6b6b',
-        radius: 100,
+        au: 1.52,
         periodYears: 1.88,
-        polygonSides: 6
+        faceType: 'triangle' // e.g. tetrahedron face
       },
       {
         name: 'Jupiter',
         color: '#ffdd99',
-        radius: 135,
+        au: 5.20,
         periodYears: 11.86,
-        polygonSides: 7
+        faceType: 'square'
       },
       {
         name: 'Saturn',
         color: '#f4e285',
-        radius: 165,
+        au: 9.54,
         periodYears: 29.46,
-        polygonSides: 8
+        faceType: 'pentagon'
       },
       {
         name: 'Uranus',
         color: '#7fffd4',
-        radius: 195,
+        au: 19.19,
         periodYears: 84.01,
-        polygonSides: 9
+        faceType: 'triangle'
       },
       {
         name: 'Neptune',
         color: '#6c5ce7',
-        radius: 220,
+        au: 30.07,
         periodYears: 164.8,
-        polygonSides: 10
+        faceType: 'square'
       },
       {
         name: 'Pluto',
         color: '#b388ff',
-        radius: 240,
+        au: 39.48,
         periodYears: 248.0,
-        polygonSides: 12
+        faceType: 'pentagon'
       }
     ];
 
-    // Build legend dynamically
+    // Legend
     const legend = document.getElementById('legend');
     planets.forEach(p => {
       const item = document.createElement('div');
@@ -198,19 +207,26 @@
       legend.appendChild(item);
     });
 
-    // Time scaling: 1 "Earth year" = 60 seconds in animation
+    // Time scaling: 1 Earth year = 60 seconds
     const SECONDS_PER_EARTH_YEAR = 60;
+
+    function getSidesFromFace(faceType) {
+      if (faceType === 'triangle') return 3;
+      if (faceType === 'square')   return 4;
+      if (faceType === 'pentagon') return 5;
+      return 0;
+    }
 
     function draw() {
       const w = canvas.width;
       const h = canvas.height;
       const cx = w / 2;
       const cy = h / 2;
-      const t = Date.now() / 1000; // seconds since epoch
+      const t = Date.now() / 1000;
 
       ctx.clearRect(0, 0, w, h);
 
-      // Draw subtle radial glow around center
+      // Glow at center
       const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80);
       glow.addColorStop(0, 'rgba(255, 215, 0, 0.6)');
       glow.addColorStop(0.4, 'rgba(255, 215, 0, 0.15)');
@@ -220,10 +236,17 @@
       ctx.arc(cx, cy, 80, 0, Math.PI * 2);
       ctx.fill();
 
-      // Draw orbits + polygons + planets
+      // Determine AU scaling based on canvas size
+      const nonSunPlanets = planets.filter(p => p.name !== 'Sun');
+      const minAU = Math.min(...nonSunPlanets.map(p => p.au));
+      const maxAU = Math.max(...nonSunPlanets.map(p => p.au));
+
+      const maxRadius = Math.min(cx, cy) - 40; // keep a margin
+      const minRadius = 40;
+      const scale = (maxRadius - minRadius) / (maxAU - minAU);
+
       planets.forEach(planet => {
         if (planet.name === 'Sun') {
-          // Draw sun as glowing dot in center
           ctx.beginPath();
           ctx.fillStyle = planet.color;
           ctx.shadowBlur = 20;
@@ -234,31 +257,35 @@
           return;
         }
 
-        // Orbit circle
+        // Radius derived from AU
+        const radius = minRadius + (planet.au - minAU) * scale;
+
+        // Orbit
         ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)'; // gold, semi-transparent
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
         ctx.lineWidth = 1;
-        ctx.arc(cx, cy, planet.radius, 0, Math.PI * 2);
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Compute current angle of planet based on orbital period
+        // Angle from orbital period
         const orbitSeconds = planet.periodYears * SECONDS_PER_EARTH_YEAR;
         const angle = (t % orbitSeconds) / orbitSeconds * Math.PI * 2;
 
-        const x = cx + planet.radius * Math.cos(angle);
-        const y = cy + planet.radius * Math.sin(angle);
+        const x = cx + radius * Math.cos(angle);
+        const y = cy + radius * Math.sin(angle);
 
-        // Draw circumscribed polygon with one vertex at planet position
-        const sides = planet.polygonSides;
+        // Platonic solid face as regular polygon on the orbit,
+        // with one vertex riding at the planet position.
+        const sides = getSidesFromFace(planet.faceType);
         if (sides >= 3) {
           ctx.beginPath();
           ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
-          ctx.lineWidth = 0.8;
+          ctx.lineWidth = 0.9;
 
           for (let i = 0; i <= sides; i++) {
             const theta = angle + (i * 2 * Math.PI / sides);
-            const vx = cx + planet.radius * Math.cos(theta);
-            const vy = cy + planet.radius * Math.sin(theta);
+            const vx = cx + radius * Math.cos(theta);
+            const vy = cy + radius * Math.sin(theta);
             if (i === 0) {
               ctx.moveTo(vx, vy);
             } else {
@@ -268,7 +295,7 @@
           ctx.stroke();
         }
 
-        // Draw planet as bright colored dot
+        // Planet dot
         ctx.beginPath();
         ctx.fillStyle = planet.color;
         ctx.shadowBlur = 8;
@@ -278,7 +305,7 @@
         ctx.shadowBlur = 0;
       });
 
-      // Optional: draw a very thin outer ring to frame the clock
+      // Outer frame ring
       ctx.beginPath();
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
       ctx.lineWidth = 0.5;

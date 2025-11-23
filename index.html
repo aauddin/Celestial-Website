@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Orbital Clock</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #000;
+      color: #fff;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    #wrapper {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #111 0%, #000 55%, #000 100%);
+    }
+
+    h1 {
+      margin: 0 0 8px 0;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    #subtitle {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    #canvas {
+      border-radius: 50%;
+      max-width: min(90vmin, 800px);
+      max-height: min(90vmin, 800px);
+      box-shadow: 0 0 30px rgba(255, 215, 0, 0.25),
+                  0 0 80px rgba(255, 215, 0, 0.12);
+      background: radial-gradient(circle at center, #111 0%, #000 60%);
+    }
+
+    #legend {
+      position: absolute;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      opacity: 0.8;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* Planet colors */
+    .sun     { background: #ffd700; }
+    .mercury { background: #c0c0c0; }
+    .venus   { background: #ffbf7f; }
+    .earth   { background: #4cc9f0; }
+    .mars    { background: #ff6b6b; }
+    .jupiter { background: #ffdd99; }
+    .saturn  { background: #f4e285; }
+    .uranus  { background: #7fffd4; }
+    .neptune { background: #6c5ce7; }
+    .pluto   { background: #b388ff; }
+  </style>
+</head>
+<body>
+  <div id="wrapper">
+    <div>
+      <h1>HELIOS ORBITAL CLOCK</h1>
+      <div id="subtitle">Sun · Mercury · Venus · Earth · Mars · Jupiter · Saturn · Uranus · Neptune · Pluto</div>
+    </div>
+    <canvas id="canvas"></canvas>
+    <div id="legend"></div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Resize canvas to be a square using the smallest viewport dimension
+    function resizeCanvas() {
+      const size = Math.min(window.innerWidth, window.innerHeight) * 0.8;
+      canvas.width = size;
+      canvas.height = size;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Planet data: approximate orbital periods (Earth years) and visual radii (px scale)
+    const planets = [
+      {
+        name: 'Sun',
+        color: '#ffd700',
+        radius: 0,
+        periodYears: 0,           // no orbit
+        polygonSides: 0
+      },
+      {
+        name: 'Mercury',
+        color: '#c0c0c0',
+        radius: 40,
+        periodYears: 0.24,
+        polygonSides: 3
+      },
+      {
+        name: 'Venus',
+        color: '#ffbf7f',
+        radius: 60,
+        periodYears: 0.62,
+        polygonSides: 4
+      },
+      {
+        name: 'Earth',
+        color: '#4cc9f0',
+        radius: 80,
+        periodYears: 1.0,
+        polygonSides: 5
+      },
+      {
+        name: 'Mars',
+        color: '#ff6b6b',
+        radius: 100,
+        periodYears: 1.88,
+        polygonSides: 6
+      },
+      {
+        name: 'Jupiter',
+        color: '#ffdd99',
+        radius: 135,
+        periodYears: 11.86,
+        polygonSides: 7
+      },
+      {
+        name: 'Saturn',
+        color: '#f4e285',
+        radius: 165,
+        periodYears: 29.46,
+        polygonSides: 8
+      },
+      {
+        name: 'Uranus',
+        color: '#7fffd4',
+        radius: 195,
+        periodYears: 84.01,
+        polygonSides: 9
+      },
+      {
+        name: 'Neptune',
+        color: '#6c5ce7',
+        radius: 220,
+        periodYears: 164.8,
+        polygonSides: 10
+      },
+      {
+        name: 'Pluto',
+        color: '#b388ff',
+        radius: 240,
+        periodYears: 248.0,
+        polygonSides: 12
+      }
+    ];
+
+    // Build legend dynamically
+    const legend = document.getElementById('legend');
+    planets.forEach(p => {
+      const item = document.createElement('div');
+      item.className = 'legend-item';
+      const dot = document.createElement('div');
+      dot.className = 'legend-dot ' + p.name.toLowerCase();
+      const label = document.createElement('span');
+      label.textContent = p.name;
+      item.appendChild(dot);
+      item.appendChild(label);
+      legend.appendChild(item);
+    });
+
+    // Time scaling: 1 "Earth year" = 60 seconds in animation
+    const SECONDS_PER_EARTH_YEAR = 60;
+
+    function draw() {
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const t = Date.now() / 1000; // seconds since epoch
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Draw subtle radial glow around center
+      const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80);
+      glow.addColorStop(0, 'rgba(255, 215, 0, 0.6)');
+      glow.addColorStop(0.4, 'rgba(255, 215, 0, 0.15)');
+      glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 80, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw orbits + polygons + planets
+      planets.forEach(planet => {
+        if (planet.name === 'Sun') {
+          // Draw sun as glowing dot in center
+          ctx.beginPath();
+          ctx.fillStyle = planet.color;
+          ctx.shadowBlur = 20;
+          ctx.shadowColor = planet.color;
+          ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          return;
+        }
+
+        // Orbit circle
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)'; // gold, semi-transparent
+        ctx.lineWidth = 1;
+        ctx.arc(cx, cy, planet.radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Compute current angle of planet based on orbital period
+        const orbitSeconds = planet.periodYears * SECONDS_PER_EARTH_YEAR;
+        const angle = (t % orbitSeconds) / orbitSeconds * Math.PI * 2;
+
+        const x = cx + planet.radius * Math.cos(angle);
+        const y = cy + planet.radius * Math.sin(angle);
+
+        // Draw circumscribed polygon with one vertex at planet position
+        const sides = planet.polygonSides;
+        if (sides >= 3) {
+          ctx.beginPath();
+          ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
+          ctx.lineWidth = 0.8;
+
+          for (let i = 0; i <= sides; i++) {
+            const theta = angle + (i * 2 * Math.PI / sides);
+            const vx = cx + planet.radius * Math.cos(theta);
+            const vy = cy + planet.radius * Math.sin(theta);
+            if (i === 0) {
+              ctx.moveTo(vx, vy);
+            } else {
+              ctx.lineTo(vx, vy);
+            }
+          }
+          ctx.stroke();
+        }
+
+        // Draw planet as bright colored dot
+        ctx.beginPath();
+        ctx.fillStyle = planet.color;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = planet.color;
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+
+      // Optional: draw a very thin outer ring to frame the clock
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = 0.5;
+      ctx.arc(cx, cy, Math.min(cx, cy) - 6, 0, Math.PI * 2);
+      ctx.stroke();
+
+      requestAnimationFrame(draw);
+    }
+
+    draw();
+  </script>
+</body>
+</html>

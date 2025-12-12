@@ -2,14 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Helios Platonic Orbital Clock</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Helios Nouveau Orrery</title>
   <style>
+    :root{
+      --bg: #000;
+      --text: #fff;
+
+      /* Theme */
+      --gold: rgba(255, 215, 0, 0.85);
+      --gold-soft: rgba(255, 215, 0, 0.18);
+      --gold-faint: rgba(255, 215, 0, 0.12);
+
+      --sage: rgba(140, 255, 205, 0.18);
+      --sage-strong: rgba(140, 255, 205, 0.30);
+      --blush: rgba(255, 210, 185, 0.16);
+      --sky: rgba(185, 210, 255, 0.14);
+
+      --panel: rgba(17,17,17,0.86);
+      --panel-border: rgba(255,215,0,0.22);
+      --panel-border-strong: rgba(255,215,0,0.38);
+    }
+
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
-      background: #000;
-      color: #fff;
+      background: var(--bg);
+      color: var(--text);
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       overflow: hidden;
     }
@@ -17,110 +37,162 @@
     #wrapper {
       position: fixed;
       inset: 0;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at center, #141414 0%, #060606 45%, #000 75%),
+        radial-gradient(circle at 15% 20%, rgba(140,255,205,0.06) 0%, transparent 35%),
+        radial-gradient(circle at 85% 25%, rgba(255,210,185,0.05) 0%, transparent 35%),
+        radial-gradient(circle at 20% 85%, rgba(185,210,255,0.05) 0%, transparent 40%);
+    }
+
+    /* Ensure content sits above SVG frame overlay */
+    #content {
+      position: relative;
+      z-index: 5;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      background: radial-gradient(circle at center, #111 0%, #000 55%, #000 100%);
+      gap: 10px;
+      width: min(92vmin, 860px);
     }
 
     #header {
+      width: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-bottom: 6px;
+      gap: 6px;
+      padding: 10px 12px;
+      background: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.25));
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      box-shadow:
+        0 0 22px rgba(255,215,0,0.10),
+        inset 0 0 24px rgba(255,215,0,0.05);
+      backdrop-filter: blur(2px);
     }
 
     h1 {
-      margin: 0 0 4px 0;
+      margin: 0;
       font-weight: 500;
-      letter-spacing: 0.18em;
+      letter-spacing: 0.22em;
       text-transform: uppercase;
-      font-size: 14px;
+      font-size: 13px;
       text-align: center;
+      opacity: 0.95;
     }
 
     #subtitle {
       font-size: 11px;
-      opacity: 0.7;
-      margin-bottom: 6px;
+      opacity: 0.72;
       text-align: center;
+      margin-top: -2px;
     }
 
     #controls {
+      width: 100%;
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 8px 10px;
       align-items: center;
       justify-content: center;
       font-size: 11px;
-      opacity: 0.85;
+      opacity: 0.9;
     }
 
     #controls label {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
+      padding: 6px 8px;
+      border: 1px solid rgba(255,215,0,0.18);
+      border-radius: 10px;
+      background: rgba(0,0,0,0.35);
     }
 
     #controls input[type="date"],
     #controls select {
-      background: #111;
-      border: 1px solid #333;
+      background: rgba(15,15,15,0.9);
+      border: 1px solid rgba(255,215,0,0.18);
       color: #fff;
-      padding: 2px 4px;
-      border-radius: 4px;
+      padding: 4px 6px;
+      border-radius: 8px;
       font-size: 11px;
+      outline: none;
     }
 
     #controls button {
-      background: #111;
-      border: 1px solid #444;
+      background: rgba(15,15,15,0.75);
+      border: 1px solid rgba(255,215,0,0.26);
       color: #fff;
-      padding: 2px 6px;
-      border-radius: 4px;
+      padding: 6px 9px;
+      border-radius: 10px;
       font-size: 11px;
       cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
+      transition: transform 0.06s ease, background 0.15s ease, border-color 0.15s ease;
     }
-
     #controls button:hover {
-      background: #222;
-      border-color: #888;
+      background: rgba(30,30,30,0.85);
+      border-color: rgba(255,215,0,0.55);
     }
-
-    #controls .zoom-label {
-      margin-left: 4px;
+    #controls button:active {
+      transform: translateY(1px);
     }
 
     #canvas {
+      width: min(92vmin, 820px);
+      height: min(92vmin, 820px);
       border-radius: 50%;
-      max-width: min(90vmin, 800px);
-      max-height: min(90vmin, 800px);
-      box-shadow: 0 0 30px rgba(255, 215, 0, 0.25),
-                  0 0 80px rgba(255, 215, 0, 0.12);
-      background: radial-gradient(circle at center, #111 0%, #000 60%);
+      background: radial-gradient(circle at center, #111 0%, #000 62%);
+      border: 1px solid rgba(255, 215, 0, 0.18);
+      box-shadow:
+        0 0 25px rgba(255, 215, 0, 0.16),
+        0 0 80px rgba(140, 255, 205, 0.04),
+        inset 0 0 35px rgba(255, 215, 0, 0.06);
+    }
+
+    #hud {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 11px;
+      opacity: 0.82;
+      padding: 8px 12px;
+      border-radius: 14px;
+      background: rgba(0,0,0,0.32);
+      border: 1px solid rgba(255,215,0,0.16);
+      box-shadow: inset 0 0 18px rgba(255,215,0,0.05);
+    }
+
+    #hud .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
     }
 
     #legend {
-      position: absolute;
-      bottom: 18px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 11px;
-      opacity: 0.8;
+      width: 100%;
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
       justify-content: center;
+      font-size: 11px;
+      opacity: 0.82;
+      padding-bottom: 4px;
     }
 
     .legend-item {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,215,0,0.14);
+      background: rgba(0,0,0,0.25);
     }
-
     .legend-dot {
       width: 8px;
       height: 8px;
@@ -138,43 +210,236 @@
     .uranus  { background: #7fffd4; }
     .neptune { background: #6c5ce7; }
     .pluto   { background: #b388ff; }
+
+    /* Art Nouveau SVG frame overlay */
+    #nouveauFrame {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0.98;
+      filter: drop-shadow(0 0 18px rgba(255,215,0,0.10));
+    }
+
+    /* A faint patterned veil behind the frame to help it read */
+    #nouveauVeil{
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.18;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(140,255,205,0.20) 0 10px, transparent 11px),
+        radial-gradient(circle at 18% 26%, rgba(255,210,185,0.16) 0 8px, transparent 9px),
+        radial-gradient(circle at 86% 22%, rgba(185,210,255,0.16) 0 9px, transparent 10px),
+        radial-gradient(circle at 78% 84%, rgba(140,255,205,0.16) 0 10px, transparent 11px),
+        radial-gradient(circle at 22% 78%, rgba(255,210,185,0.14) 0 10px, transparent 11px);
+      mix-blend-mode: screen;
+    }
+
+    /* Make sure the whole layout stays centered on small screens */
+    @media (max-width: 560px){
+      #hud { flex-direction: column; align-items: center; }
+    }
   </style>
 </head>
+
 <body>
   <div id="wrapper">
-    <div id="header">
-      <h1>HELIOS PLATONIC ORBITAL CLOCK</h1>
-      <div id="subtitle">
-        Sun · Mercury · Venus · Earth · Mars · Jupiter · Saturn · Uranus · Neptune · Pluto
-      </div>
-      <div id="controls">
-        <label>
-          Date:
-          <input type="date" id="datePicker" />
-        </label>
-        <label>
-          Time flow:
-          <select id="speedSelect">
-            <option value="realtime">Real-time</option>
-            <option value="hour">1 hour / sec</option>
-            <option value="day">1 day / sec</option>
-            <option value="month">1 month / sec</option>
-            <option value="year">1 year / sec</option>
-            <option value="century">1 century / sec</option>
-          </select>
-        </label>
-        <button id="todayBtn">Today (Live)</button>
-        <span class="zoom-label">Zoom:</span>
-        <button id="zoomIn">+</button>
-        <button id="zoomOut">−</button>
-      </div>
-    </div>
+    <div id="nouveauVeil" aria-hidden="true"></div>
 
-    <canvas id="canvas"></canvas>
-    <div id="legend"></div>
+    <!-- Art Nouveau Frame (inline SVG) -->
+    <svg id="nouveauFrame" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <!-- Metallic-ish gold line gradient -->
+        <linearGradient id="goldStroke" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="rgba(255,215,0,0.30)"/>
+          <stop offset="0.35" stop-color="rgba(255,215,0,0.95)"/>
+          <stop offset="0.7" stop-color="rgba(255,245,170,0.60)"/>
+          <stop offset="1" stop-color="rgba(255,215,0,0.85)"/>
+        </linearGradient>
+
+        <!-- Pastel fill gradients for petals/leaves -->
+        <radialGradient id="leafGreen" cx="40%" cy="40%" r="70%">
+          <stop offset="0" stop-color="rgba(140,255,205,0.28)"/>
+          <stop offset="1" stop-color="rgba(140,255,205,0.06)"/>
+        </radialGradient>
+        <radialGradient id="petalBlush" cx="40%" cy="40%" r="75%">
+          <stop offset="0" stop-color="rgba(255,210,185,0.22)"/>
+          <stop offset="1" stop-color="rgba(255,210,185,0.05)"/>
+        </radialGradient>
+        <radialGradient id="petalSky" cx="40%" cy="40%" r="75%">
+          <stop offset="0" stop-color="rgba(185,210,255,0.18)"/>
+          <stop offset="1" stop-color="rgba(185,210,255,0.05)"/>
+        </radialGradient>
+
+        <!-- Soft glow -->
+        <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="1.2" result="b"/>
+          <feMerge>
+            <feMergeNode in="b"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+
+      <!-- Outer border -->
+      <rect x="22" y="22" width="956" height="956" rx="42" ry="42"
+            fill="none" stroke="url(#goldStroke)" stroke-width="2" opacity="0.75"/>
+
+      <!-- Inner border -->
+      <rect x="48" y="48" width="904" height="904" rx="34" ry="34"
+            fill="none" stroke="rgba(255,215,0,0.25)" stroke-width="1.5"/>
+
+      <!-- Corner ornaments (one design, mirrored/rotated) -->
+      <g filter="url(#softGlow)" opacity="0.95">
+        <!-- TOP-LEFT -->
+        <g transform="translate(0,0)">
+          <!-- Leaves -->
+          <path d="M70,150 C105,120 130,95 165,70 C145,120 125,155 90,190 C75,175 65,165 70,150 Z"
+                fill="url(#leafGreen)" stroke="url(#goldStroke)" stroke-width="1.6"/>
+          <path d="M95,105 C120,90 150,80 185,78 C155,105 130,135 105,165 C92,142 88,125 95,105 Z"
+                fill="url(#leafGreen)" stroke="url(#goldStroke)" stroke-width="1.4" opacity="0.9"/>
+
+          <!-- Petals -->
+          <path d="M140,160 C165,145 190,120 200,95 C215,125 210,155 190,180 C172,175 155,170 140,160 Z"
+                fill="url(#petalBlush)" stroke="url(#goldStroke)" stroke-width="1.2" opacity="0.9"/>
+          <path d="M155,140 C180,130 205,110 220,86 C232,116 228,150 210,170 C192,165 173,155 155,140 Z"
+                fill="url(#petalSky)" stroke="url(#goldStroke)" stroke-width="1.0" opacity="0.85"/>
+
+          <!-- Vines / curls -->
+          <path d="M70,240 C120,210 150,190 210,170
+                   C260,152 300,120 330,80"
+                fill="none" stroke="url(#goldStroke)" stroke-width="2.2" stroke-linecap="round" opacity="0.85"/>
+          <path d="M120,240 C95,255 85,275 98,290
+                   C110,305 140,300 142,280
+                   C144,260 120,255 112,270"
+                fill="none" stroke="url(#goldStroke)" stroke-width="1.6" opacity="0.75"/>
+          <path d="M210,170 C190,205 200,230 230,240
+                   C265,252 290,230 280,205
+                   C270,180 238,180 236,205"
+                fill="none" stroke="url(#goldStroke)" stroke-width="1.4" opacity="0.65"/>
+
+          <!-- Small rosette -->
+          <circle cx="205" cy="205" r="7" fill="rgba(255,215,0,0.22)" stroke="url(#goldStroke)" stroke-width="1.2"/>
+          <circle cx="205" cy="205" r="2.2" fill="rgba(255,215,0,0.85)"/>
+        </g>
+
+        <!-- TOP-RIGHT (mirror) -->
+        <g transform="translate(1000,0) scale(-1,1)">
+          <use href="#cornerTL" />
+        </g>
+
+        <!-- BOTTOM-LEFT (flip) -->
+        <g transform="translate(0,1000) scale(1,-1)">
+          <use href="#cornerTL" />
+        </g>
+
+        <!-- BOTTOM-RIGHT (rotate 180) -->
+        <g transform="translate(1000,1000) scale(-1,-1)">
+          <use href="#cornerTL" />
+        </g>
+      </g>
+
+      <!-- Define the reusable group after first draw: -->
+      <g id="cornerTL" opacity="0">
+        <!-- (placeholder; real geometry already drawn above) -->
+      </g>
+
+      <!-- Side filigree (top/bottom/left/right) -->
+      <g opacity="0.75" filter="url(#softGlow)">
+        <!-- Top -->
+        <path d="M210,60
+                 C260,88 290,88 340,60
+                 C390,32 420,32 470,60
+                 C520,88 550,88 600,60
+                 C650,32 680,32 730,60
+                 C780,88 810,88 860,60"
+              fill="none" stroke="url(#goldStroke)" stroke-width="1.5" stroke-linecap="round"/>
+
+        <path d="M240,78 C255,70 275,70 290,78
+                 C305,86 325,86 340,78"
+              fill="none" stroke="rgba(140,255,205,0.22)" stroke-width="1.0" stroke-linecap="round"/>
+
+        <!-- Bottom -->
+        <path d="M210,940
+                 C260,912 290,912 340,940
+                 C390,968 420,968 470,940
+                 C520,912 550,912 600,940
+                 C650,968 680,968 730,940
+                 C780,912 810,912 860,940"
+              fill="none" stroke="url(#goldStroke)" stroke-width="1.5" stroke-linecap="round"/>
+
+        <path d="M610,922 C625,930 645,930 660,922
+                 C675,914 695,914 710,922"
+              fill="none" stroke="rgba(255,210,185,0.20)" stroke-width="1.0" stroke-linecap="round"/>
+
+        <!-- Left -->
+        <path d="M60,210
+                 C88,260 88,290 60,340
+                 C32,390 32,420 60,470
+                 C88,520 88,550 60,600
+                 C32,650 32,680 60,730
+                 C88,780 88,810 60,860"
+              fill="none" stroke="url(#goldStroke)" stroke-width="1.5" stroke-linecap="round"/>
+
+        <!-- Right -->
+        <path d="M940,210
+                 C912,260 912,290 940,340
+                 C968,390 968,420 940,470
+                 C912,520 912,550 940,600
+                 C968,650 968,680 940,730
+                 C912,780 912,810 940,860"
+              fill="none" stroke="url(#goldStroke)" stroke-width="1.5" stroke-linecap="round"/>
+      </g>
+    </svg>
+
+    <div id="content">
+      <div id="header">
+        <h1>HELIOS · NOUVEAU ORRERY</h1>
+        <div id="subtitle">Art Nouveau frame · Platonic-face clockwork · Real-time + historical</div>
+
+        <div id="controls">
+          <label>
+            Date:
+            <input type="date" id="datePicker" />
+          </label>
+
+          <label>
+            Time flow:
+            <select id="speedSelect">
+              <option value="realtime">Real-time</option>
+              <option value="hour">1 hour / sec</option>
+              <option value="day">1 day / sec</option>
+              <option value="month">1 month / sec</option>
+              <option value="year">1 year / sec</option>
+              <option value="century">1 century / sec</option>
+            </select>
+          </label>
+
+          <button id="todayBtn">Today (Live)</button>
+
+          <button id="zoomOut">−</button>
+          <button id="zoomIn">+</button>
+        </div>
+      </div>
+
+      <canvas id="canvas"></canvas>
+
+      <div id="hud">
+        <div class="pill"><span style="opacity:.75;">Sim date:</span> <span id="simDateText">—</span></div>
+        <div class="pill"><span style="opacity:.75;">Zoom:</span> <span id="zoomText">1.00×</span></div>
+        <div class="pill"><span style="opacity:.75;">Mode:</span> <span id="modeText">Live</span></div>
+      </div>
+
+      <div id="legend"></div>
+    </div>
   </div>
 
   <script>
+    // ----------------------------
+    // Canvas + UI setup
+    // ----------------------------
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -184,16 +449,17 @@
     const zoomOutBtn = document.getElementById('zoomOut');
     const speedSelect = document.getElementById('speedSelect');
 
-    let selectedDate = null;      // if null + realtime => true live mode
-    let zoomFactor = 1.0;
-    let simJD = null;             // simulation Julian date (for non-live modes)
-    let lastFrameTime = null;     // for dt calc
-    let speedMode = 'realtime';
+    const simDateText = document.getElementById('simDateText');
+    const zoomText = document.getElementById('zoomText');
+    const modeText = document.getElementById('modeText');
 
+    // Match actual CSS size to drawing buffer
     function resizeCanvas() {
-      const size = Math.min(window.innerWidth, window.innerHeight) * 0.8;
-      canvas.width = size;
-      canvas.height = size;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      canvas.width = Math.floor(rect.width * dpr);
+      canvas.height = Math.floor(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
     }
     window.addEventListener('resize', () => {
       resizeCanvas();
@@ -201,185 +467,32 @@
     });
     resizeCanvas();
 
+    // ----------------------------
+    // Simulation controls
+    // ----------------------------
+    let selectedDate = null;      // if null + realtime => true live mode
+    let zoomFactor = 1.0;
+    let simJD = null;
+    let lastFrameTime = null;
+    let speedMode = 'realtime';
+
     // Julian date from JS Date (UTC)
     function getJulianDate(date) {
       return date.getTime() / 86400000 + 2440587.5;
     }
 
-    /*
-      Planet config:
-      - For Mercury–Neptune we use JPL approximate Keplerian elements (Table 1, J2000 frame).
-      - Pluto is treated with a simpler circular model (approx).
-    */
+    function formatUTCDate(jd){
+      // Convert JD -> Date approx by reversing unix conversion
+      const ms = (jd - 2440587.5) * 86400000;
+      const d = new Date(ms);
+      const yyyy = d.getUTCFullYear();
+      const mm = String(d.getUTCMonth()+1).padStart(2,'0');
+      const dd = String(d.getUTCDate()).padStart(2,'0');
+      const hh = String(d.getUTCHours()).padStart(2,'0');
+      const mi = String(d.getUTCMinutes()).padStart(2,'0');
+      return `${yyyy}-${mm}-${dd} ${hh}:${mi} UTC`;
+    }
 
-    const planetConfigs = [
-      {
-        name: 'Sun',
-        color: '#ffd700',
-        type: 'star',
-        radiusKm: 696340,
-        faceType: null,
-        meanAU: 0
-      },
-      {
-        name: 'Mercury',
-        color: '#c0c0c0',
-        type: 'kepler',
-        radiusKm: 2440,
-        faceType: 'triangle',
-        meanAU: 0.38709927
-      },
-      {
-        name: 'Venus',
-        color: '#ffbf7f',
-        type: 'kepler',
-        radiusKm: 6052,
-        faceType: 'square',
-        meanAU: 0.72333566
-      },
-      {
-        name: 'Earth',
-        color: '#4cc9f0',
-        type: 'kepler',
-        radiusKm: 6371,
-        faceType: 'pentagon',
-        meanAU: 1.00000261
-      },
-      {
-        name: 'Mars',
-        color: '#ff6b6b',
-        type: 'kepler',
-        radiusKm: 3390,
-        faceType: 'triangle',
-        meanAU: 1.52371034
-      },
-      {
-        name: 'Jupiter',
-        color: '#ffdd99',
-        type: 'kepler',
-        radiusKm: 69911,
-        faceType: 'square',
-        meanAU: 5.20288700
-      },
-      {
-        name: 'Saturn',
-        color: '#f4e285',
-        type: 'kepler',
-        radiusKm: 58232,
-        faceType: 'pentagon',
-        meanAU: 9.53667594
-      },
-      {
-        name: 'Uranus',
-        color: '#7fffd4',
-        type: 'kepler',
-        radiusKm: 25362,
-        faceType: 'triangle',
-        meanAU: 19.18916464
-      },
-      {
-        name: 'Neptune',
-        color: '#6c5ce7',
-        type: 'kepler',
-        radiusKm: 24622,
-        faceType: 'square',
-        meanAU: 30.06992276
-      },
-      {
-        name: 'Pluto',
-        color: '#b388ff',
-        type: 'plutoSimple',
-        radiusKm: 1188,
-        faceType: 'pentagon',
-        meanAU: 39.48,
-        periodYears: 248,
-        phaseDeg0: 238   // arbitrary phase for aesthetic; not precise
-      }
-    ];
-
-    // Keplerian elements (JPL Approx Positions Table 1, 1800–2050, J2000 frame)
-    const keplerElements = {
-      Mercury: {
-        a0: 0.38709927,  aDot: 0.00000037,
-        e0: 0.20563593,  eDot: 0.00001906,
-        I0: 7.00497902,  IDot: -0.00594749,
-        L0: 252.25032350, LDot: 149472.67411175,
-        wBar0: 77.45779628, wBarDot: 0.16047689,
-        Omega0: 48.33076593, OmegaDot: -0.12534081
-      },
-      Venus: {
-        a0: 0.72333566,  aDot: 0.00000390,
-        e0: 0.00677672,  eDot: -0.00004107,
-        I0: 3.39467605,  IDot: -0.00078890,
-        L0: 181.97909950, LDot: 58517.81538729,
-        wBar0: 131.60246718, wBarDot: 0.00268329,
-        Omega0: 76.67984255, OmegaDot: -0.27769418
-      },
-      Earth: { // Earth-Moon barycenter
-        a0: 1.00000261,  aDot: 0.00000562,
-        e0: 0.01671123,  eDot: -0.00004392,
-        I0: -0.00001531, IDot: -0.01294668,
-        L0: 100.46457166, LDot: 35999.37244981,
-        wBar0: 102.93768193, wBarDot: 0.32327364,
-        Omega0: 0.0,        OmegaDot: 0.0
-      },
-      Mars: {
-        a0: 1.52371034,  aDot: 0.00001847,
-        e0: 0.09339410,  eDot: 0.00007882,
-        I0: 1.84969142,  IDot: -0.00813131,
-        L0: -4.55343205, LDot: 19140.30268499,
-        wBar0: -23.94362959, wBarDot: 0.44441088,
-        Omega0: 49.55953891, OmegaDot: -0.29257343
-      },
-      Jupiter: {
-        a0: 5.20288700,  aDot: -0.00011607,
-        e0: 0.04838624,  eDot: -0.00013253,
-        I0: 1.30439695,  IDot: -0.00183714,
-        L0: 34.39644051, LDot: 3034.74612775,
-        wBar0: 14.72847983, wBarDot: 0.21252668,
-        Omega0: 100.47390909, OmegaDot: 0.20469106
-      },
-      Saturn: {
-        a0: 9.53667594,  aDot: -0.00125060,
-        e0: 0.05386179,  eDot: -0.00050991,
-        I0: 2.48599187,  IDot: 0.00193609,
-        L0: 49.95424423, LDot: 1222.49362201,
-        wBar0: 92.59887831, wBarDot: -0.41897216,
-        Omega0: 113.66242448, OmegaDot: -0.28867794
-      },
-      Uranus: {
-        a0: 19.18916464,  aDot: -0.00196176,
-        e0: 0.04725744,   eDot: -0.00004397,
-        I0: 0.77263783,   IDot: -0.00242939,
-        L0: 313.23810451, LDot: 428.48202785,
-        wBar0: 170.95427630, wBarDot: 0.40805281,
-        Omega0: 74.01692503, OmegaDot: 0.04240589
-      },
-      Neptune: {
-        a0: 30.06992276,  aDot: 0.00026291,
-        e0: 0.00859048,   eDot: 0.00005105,
-        I0: 1.77004347,   IDot: 0.00035372,
-        L0: -55.12002969, LDot: 218.45945325,
-        wBar0: 44.96476227, wBarDot: -0.32241464,
-        Omega0: 131.78422574, OmegaDot: -0.00508664
-      }
-    };
-
-    // Legend
-    const legend = document.getElementById('legend');
-    planetConfigs.forEach(p => {
-      const item = document.createElement('div');
-      item.className = 'legend-item';
-      const dot = document.createElement('div');
-      dot.className = 'legend-dot ' + p.name.toLowerCase();
-      const label = document.createElement('span');
-      label.textContent = p.name;
-      item.appendChild(dot);
-      item.appendChild(label);
-      legend.appendChild(item);
-    });
-
-    // Controls
     datePicker.addEventListener('change', () => {
       if (datePicker.value) {
         selectedDate = new Date(datePicker.value + 'T00:00:00Z');
@@ -400,13 +513,15 @@
 
     zoomInBtn.addEventListener('click', () => {
       zoomFactor *= 1.2;
-      if (zoomFactor > 8) zoomFactor = 8;
+      if (zoomFactor > 12) zoomFactor = 12;
+      zoomText.textContent = `${zoomFactor.toFixed(2)}×`;
       lastFrameTime = null;
     });
 
     zoomOutBtn.addEventListener('click', () => {
       zoomFactor /= 1.2;
-      if (zoomFactor < 0.2) zoomFactor = 0.2;
+      if (zoomFactor < 0.15) zoomFactor = 0.15;
+      zoomText.textContent = `${zoomFactor.toFixed(2)}×`;
       lastFrameTime = null;
     });
 
@@ -414,10 +529,6 @@
       speedMode = speedSelect.value;
       lastFrameTime = null;
     });
-
-    // J2000 epoch (Terrestrial Time) in Julian days
-    const JD_J2000 = 2451545.0;
-    const SECONDS_PER_DAY = 86400;
 
     function getSpeedDaysPerSecond(mode) {
       switch (mode) {
@@ -427,215 +538,301 @@
         case 'year':    return 365.25;
         case 'century': return 36525;
         case 'realtime':
-        default:        return 1 / 86400; // unused in live mode, but fine for sim
+        default:        return 1 / 86400; // not used in true-live mode
       }
     }
 
-    // Planet dot radius scaling
-    const earthRadiusKm = 6371;
-    const minDotPx = 2.0;
-    const maxDotPx = 10.0;
+    // ----------------------------
+    // Planet configuration
+    // Mercury..Neptune: JPL low-precision kepler elements (J2000 frame)
+    // Pluto: simple placeholder orbit (visual only)
+    // ----------------------------
+    const JD_J2000 = 2451545.0;
 
-    function getPlanetDotRadius(planet) {
-      if (planet.name === 'Sun') return 8;
-      const ratio = planet.radiusKm / earthRadiusKm;
-      const scaled = Math.cbrt(ratio);
-      let px = 3 * scaled;
-      if (px < minDotPx) px = minDotPx;
-      if (px > maxDotPx) px = maxDotPx;
-      return px;
-    }
+    const planetConfigs = [
+      { name:'Sun',     color:'#ffd700', type:'star',  radiusKm:696340, faceType:null,      meanAU:0 },
+      { name:'Mercury', color:'#c0c0c0', type:'kepler',radiusKm:2440,   faceType:'triangle',meanAU:0.38709927 },
+      { name:'Venus',   color:'#ffbf7f', type:'kepler',radiusKm:6052,   faceType:'square',  meanAU:0.72333566 },
+      { name:'Earth',   color:'#4cc9f0', type:'kepler',radiusKm:6371,   faceType:'pentagon',meanAU:1.00000261 },
+      { name:'Mars',    color:'#ff6b6b', type:'kepler',radiusKm:3390,   faceType:'triangle',meanAU:1.52371034 },
+      { name:'Jupiter', color:'#ffdd99', type:'kepler',radiusKm:69911,  faceType:'square',  meanAU:5.20288700 },
+      { name:'Saturn',  color:'#f4e285', type:'kepler',radiusKm:58232,  faceType:'pentagon',meanAU:9.53667594 },
+      { name:'Uranus',  color:'#7fffd4', type:'kepler',radiusKm:25362,  faceType:'triangle',meanAU:19.18916464 },
+      { name:'Neptune', color:'#6c5ce7', type:'kepler',radiusKm:24622,  faceType:'square',  meanAU:30.06992276 },
+      { name:'Pluto',   color:'#b388ff', type:'plutoSimple',radiusKm:1188, faceType:'pentagon',meanAU:39.48, periodYears:248, phaseDeg0:238 }
+    ];
 
+    const keplerElements = {
+      Mercury: { a0:0.38709927,aDot:0.00000037, e0:0.20563593,eDot:0.00001906, I0:7.00497902,IDot:-0.00594749,
+                 L0:252.25032350,LDot:149472.67411175, wBar0:77.45779628,wBarDot:0.16047689, Omega0:48.33076593,OmegaDot:-0.12534081 },
+      Venus:   { a0:0.72333566,aDot:0.00000390, e0:0.00677672,eDot:-0.00004107, I0:3.39467605,IDot:-0.00078890,
+                 L0:181.97909950,LDot:58517.81538729, wBar0:131.60246718,wBarDot:0.00268329, Omega0:76.67984255,OmegaDot:-0.27769418 },
+      Earth:   { a0:1.00000261,aDot:0.00000562, e0:0.01671123,eDot:-0.00004392, I0:-0.00001531,IDot:-0.01294668,
+                 L0:100.46457166,LDot:35999.37244981, wBar0:102.93768193,wBarDot:0.32327364, Omega0:0.0,OmegaDot:0.0 },
+      Mars:    { a0:1.52371034,aDot:0.00001847, e0:0.09339410,eDot:0.00007882, I0:1.84969142,IDot:-0.00813131,
+                 L0:-4.55343205,LDot:19140.30268499, wBar0:-23.94362959,wBarDot:0.44441088, Omega0:49.55953891,OmegaDot:-0.29257343 },
+      Jupiter: { a0:5.20288700,aDot:-0.00011607, e0:0.04838624,eDot:-0.00013253, I0:1.30439695,IDot:-0.00183714,
+                 L0:34.39644051,LDot:3034.74612775, wBar0:14.72847983,wBarDot:0.21252668, Omega0:100.47390909,OmegaDot:0.20469106 },
+      Saturn:  { a0:9.53667594,aDot:-0.00125060, e0:0.05386179,eDot:-0.00050991, I0:2.48599187,IDot:0.00193609,
+                 L0:49.95424423,LDot:1222.49362201, wBar0:92.59887831,wBarDot:-0.41897216, Omega0:113.66242448,OmegaDot:-0.28867794 },
+      Uranus:  { a0:19.18916464,aDot:-0.00196176, e0:0.04725744,eDot:-0.00004397, I0:0.77263783,IDot:-0.00242939,
+                 L0:313.23810451,LDot:428.48202785, wBar0:170.95427630,wBarDot:0.40805281, Omega0:74.01692503,OmegaDot:0.04240589 },
+      Neptune: { a0:30.06992276,aDot:0.00026291, e0:0.00859048,eDot:0.00005105, I0:1.77004347,IDot:0.00035372,
+                 L0:-55.12002969,LDot:218.45945325, wBar0:44.96476227,wBarDot:-0.32241464, Omega0:131.78422574,OmegaDot:-0.00508664 }
+    };
+
+    // Legend builder
+    const legend = document.getElementById('legend');
+    planetConfigs.forEach(p => {
+      const item = document.createElement('div');
+      item.className = 'legend-item';
+      const dot = document.createElement('div');
+      dot.className = 'legend-dot ' + p.name.toLowerCase();
+      const label = document.createElement('span');
+      label.textContent = p.name;
+      item.appendChild(dot);
+      item.appendChild(label);
+      legend.appendChild(item);
+    });
+
+    // ----------------------------
+    // Geometry helpers
+    // ----------------------------
     function getSidesFromFace(faceType) {
       if (faceType === 'triangle') return 3;
-      if (faceType === 'square')   return 4;
+      if (faceType === 'square') return 4;
       if (faceType === 'pentagon') return 5;
       return 0;
     }
 
-    // Solve Kepler's equation (radians)
+    const earthRadiusKm = 6371;
+    function getPlanetDotRadiusPx(p) {
+      if (p.name === 'Sun') return 8;
+      const ratio = p.radiusKm / earthRadiusKm;
+      const scaled = Math.cbrt(ratio);        // compress extremes
+      let px = 3.2 * scaled;
+      px = Math.max(2.0, Math.min(10.0, px));
+      return px;
+    }
+
+    // Kepler solver
     function solveKepler(M, e) {
       let E = M;
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 7; i++) {
         const f = E - e * Math.sin(E) - M;
-        const fPrime = 1 - e * Math.cos(E);
-        E = E - f / fPrime;
+        const fp = 1 - e * Math.cos(E);
+        E = E - f / fp;
       }
       return E;
     }
 
-    // Get heliocentric position (x,y) in AU for a Kepler planet at given JD
+    function normAnglePi(a){
+      // map to (-pi, pi]
+      a = (a + Math.PI) % (2*Math.PI);
+      if (a <= 0) a += 2*Math.PI;
+      return a - Math.PI;
+    }
+
     function getKeplerXY(name, jd) {
       const el = keplerElements[name];
-      const T = (jd - JD_J2000) / 36525.0; // centuries since J2000
+      const T = (jd - JD_J2000) / 36525.0; // centuries
 
       const a = el.a0 + el.aDot * T;
       const e = el.e0 + el.eDot * T;
-      const I = (el.I0 + el.IDot * T) * Math.PI / 180;
-      const L = (el.L0 + el.LDot * T) * Math.PI / 180;
-      const wBar = (el.wBar0 + el.wBarDot * T) * Math.PI / 180;
-      const Omega = (el.Omega0 + el.OmegaDot * T) * Math.PI / 180;
+      const I = (el.I0 + el.IDot * T) * Math.PI/180;
+      const L = (el.L0 + el.LDot * T) * Math.PI/180;
+      const wBar = (el.wBar0 + el.wBarDot * T) * Math.PI/180;
+      const Omega = (el.Omega0 + el.OmegaDot * T) * Math.PI/180;
 
       const omega = wBar - Omega;
-      let M = L - wBar; // mean anomaly (rad), simplified (Table 1)
-      // Normalize to [-pi, pi]
-      M = ((M + Math.PI) % (2 * Math.PI)) - Math.PI;
+      let M = normAnglePi(L - wBar);
 
       const E = solveKepler(M, e);
 
       const xPrime = a * (Math.cos(E) - e);
-      const yPrime = a * Math.sqrt(1 - e * e) * Math.sin(E);
+      const yPrime = a * Math.sqrt(1 - e*e) * Math.sin(E);
 
       const cosO = Math.cos(Omega), sinO = Math.sin(Omega);
       const cosI = Math.cos(I),     sinI = Math.sin(I);
       const cosW = Math.cos(omega), sinW = Math.sin(omega);
 
-      const x1 =  cosW * xPrime - sinW * yPrime;
-      const y1 =  sinW * xPrime + cosW * yPrime;
+      const x1 = cosW * xPrime - sinW * yPrime;
+      const y1 = sinW * xPrime + cosW * yPrime;
 
+      // Ecliptic projection (ignore z)
       const xEcl = x1 * cosO - y1 * sinO * cosI;
       const yEcl = x1 * sinO + y1 * cosO * cosI;
-      // zEcl exists but we ignore for now
 
-      return { x: xEcl, y: yEcl, a: a };
+      return { x:xEcl, y:yEcl };
     }
 
-    function getPlutoXY(config, jd) {
+    function getPlutoXY(cfg, jd) {
       const Tyears = (jd - JD_J2000) / 365.25;
-      const angleDeg = config.phaseDeg0 + (360 * Tyears / config.periodYears);
-      const angle = angleDeg * Math.PI / 180;
-      const r = config.meanAU;
-      return {
-        x: r * Math.cos(angle),
-        y: r * Math.sin(angle),
-        a: config.meanAU
-      };
+      const angleDeg = cfg.phaseDeg0 + (360 * Tyears / cfg.periodYears);
+      const ang = angleDeg * Math.PI/180;
+      const r = cfg.meanAU;
+      return { x: r * Math.cos(ang), y: r * Math.sin(ang) };
     }
 
+    // ----------------------------
+    // Draw loop
+    // ----------------------------
     function draw() {
-      const w = canvas.width;
-      const h = canvas.height;
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
       const cx = w / 2;
       const cy = h / 2;
 
       const nowPerf = performance.now() / 1000;
       if (lastFrameTime === null) lastFrameTime = nowPerf;
-      const dtReal = nowPerf - lastFrameTime;
+      const dt = nowPerf - lastFrameTime;
       lastFrameTime = nowPerf;
 
       let jd;
+      const live = (!selectedDate && speedMode === 'realtime');
 
-      // Live mode: no selected date + realtime speed
-      if (!selectedDate && speedMode === 'realtime') {
+      if (live) {
         jd = getJulianDate(new Date());
         simJD = null;
       } else {
-        if (simJD === null) {
-          simJD = getJulianDate(selectedDate || new Date());
-        }
+        if (simJD === null) simJD = getJulianDate(selectedDate || new Date());
         const daysPerSec = getSpeedDaysPerSecond(speedMode);
-        simJD += dtReal * daysPerSec;
+        simJD += dt * daysPerSec;
         jd = simJD;
       }
 
+      modeText.textContent = live ? 'Live' : `Sim (${speedMode})`;
+      simDateText.textContent = formatUTCDate(jd);
+      zoomText.textContent = `${zoomFactor.toFixed(2)}×`;
+
+      // Clear
       ctx.clearRect(0, 0, w, h);
 
-      // Scaling AU -> pixels (up to ~50 AU)
-      const maxAU = 50;
-      const scale = (Math.min(cx, cy) - 40) * zoomFactor / maxAU;
-
-      // Central glow (Sun)
-      const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80 * zoomFactor);
-      glow.addColorStop(0, 'rgba(255, 215, 0, 0.6)');
-      glow.addColorStop(0.4, 'rgba(255, 215, 0, 0.15)');
-      glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = glow;
+      // Center glow
+      const glowR = 86 * zoomFactor;
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowR);
+      g.addColorStop(0, 'rgba(255,215,0,0.50)');
+      g.addColorStop(0.38, 'rgba(255,215,0,0.12)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.arc(cx, cy, 80 * zoomFactor, 0, Math.PI * 2);
+      ctx.arc(cx, cy, glowR, 0, Math.PI*2);
       ctx.fill();
 
-      // Precompute heliocentric coords in AU
-      const positions = {};
-      planetConfigs.forEach(p => {
-        if (p.type === 'kepler') {
-          positions[p.name] = getKeplerXY(p.name, jd);
-        } else if (p.type === 'plutoSimple') {
-          positions[p.name] = getPlutoXY(p, jd);
-        }
-      });
+      // AU scale: fit to ~50 AU, then zoom
+      const maxAU = 50;
+      const baseScale = (Math.min(cx, cy) - 32) / maxAU;
+      const scale = baseScale * zoomFactor;
 
-      // Draw orbits (faint circles using meanAU)
-      planetConfigs.forEach(p => {
-        if (p.name === 'Sun') return;
-        const orbitRadiusPx = p.meanAU * scale;
+      // Precompute positions
+      const pos = {};
+      for (const p of planetConfigs) {
+        if (p.type === 'kepler') pos[p.name] = getKeplerXY(p.name, jd);
+        else if (p.type === 'plutoSimple') pos[p.name] = getPlutoXY(p, jd);
+      }
+
+      // Orbit lines (fainter)
+      for (const p of planetConfigs) {
+        if (p.name === 'Sun') continue;
+        const r = p.meanAU * scale;
         ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255, 215, 0, 0.15)'; // faint gold
+        ctx.strokeStyle = 'rgba(255,215,0,0.10)'; // faint gold orbit
         ctx.lineWidth = 1;
-        ctx.arc(cx, cy, orbitRadiusPx, 0, Math.PI * 2);
+        ctx.arc(cx, cy, r, 0, Math.PI*2);
         ctx.stroke();
-      });
+      }
 
-      // Draw planets + Platonic polygons
-      planetConfigs.forEach(p => {
+      // Inner “clock ring” ticks (adds instrument vibe)
+      const tickR = 1.15 * scale; // around Earth-ish
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.strokeStyle = 'rgba(255,215,0,0.18)';
+      ctx.lineWidth = 1;
+      for (let i=0;i<120;i++){
+        const a = i * (Math.PI*2/120);
+        const r1 = tickR * (i%10===0 ? 1.12 : 1.06);
+        const r2 = tickR * 1.02;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a)*r2, Math.sin(a)*r2);
+        ctx.lineTo(Math.cos(a)*r1, Math.sin(a)*r1);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Draw planets, with brighter Platonic shapes
+      for (const p of planetConfigs) {
         if (p.name === 'Sun') {
-          const sunRadius = getPlanetDotRadius(p);
+          // Sun
           ctx.beginPath();
           ctx.fillStyle = p.color;
-          ctx.shadowBlur = 20;
+          ctx.shadowBlur = 24;
           ctx.shadowColor = p.color;
-          ctx.arc(cx, cy, sunRadius, 0, Math.PI * 2);
+          ctx.arc(cx, cy, getPlanetDotRadiusPx(p), 0, Math.PI*2);
           ctx.fill();
           ctx.shadowBlur = 0;
-          return;
+          continue;
         }
 
-        const pos = positions[p.name];
-        const xAU = pos.x;
-        const yAU = pos.y;
-        const rAU = Math.sqrt(xAU * xAU + yAU * yAU);
+        const xy = pos[p.name];
+        const xAU = xy.x, yAU = xy.y;
+        const rAU = Math.hypot(xAU, yAU);
 
-        const xPx = cx + xAU * scale;
-        const yPx = cy + yAU * scale;
+        const x = cx + xAU * scale;
+        const y = cy + yAU * scale;
 
-        // Platonic face polygon: regular polygon in polar coords,
-        // one vertex at the planet position (same radius + angle).
+        // Platonic face polygon: one vertex rides the planet (bright)
         const sides = getSidesFromFace(p.faceType);
         if (sides >= 3) {
-          const baseAngle = Math.atan2(yAU, xAU);
+          const baseAng = Math.atan2(yAU, xAU);
           ctx.beginPath();
-          ctx.strokeStyle = 'rgba(255, 215, 0, 0.85)'; // brighter gold
-          ctx.lineWidth = 0.9;
+          ctx.strokeStyle = 'rgba(255,215,0,0.86)'; // brighter than orbit
+          ctx.lineWidth = 1.05;
+          for (let i=0;i<=sides;i++){
+            const th = baseAng + i*(2*Math.PI/sides);
+            const vx = cx + (rAU*Math.cos(th))*scale;
+            const vy = cy + (rAU*Math.sin(th))*scale;
+            if (i===0) ctx.moveTo(vx,vy);
+            else ctx.lineTo(vx,vy);
+          }
+          ctx.stroke();
 
-          for (let i = 0; i <= sides; i++) {
-            const theta = baseAngle + (i * 2 * Math.PI / sides);
-            const vx = cx + rAU * Math.cos(theta) * scale;
-            const vy = cy + rAU * Math.sin(theta) * scale;
-            if (i === 0) ctx.moveTo(vx, vy);
-            else ctx.lineTo(vx, vy);
+          // subtle leaf-green accent shadow (gives “nouveau enamel” feel)
+          ctx.beginPath();
+          ctx.strokeStyle = 'rgba(140,255,205,0.14)';
+          ctx.lineWidth = 1.0;
+          for (let i=0;i<=sides;i++){
+            const th = baseAng + i*(2*Math.PI/sides);
+            const vx = cx + (rAU*Math.cos(th))*scale + 0.6;
+            const vy = cy + (rAU*Math.sin(th))*scale + 0.6;
+            if (i===0) ctx.moveTo(vx,vy);
+            else ctx.lineTo(vx,vy);
           }
           ctx.stroke();
         }
 
         // Planet dot
-        const dotRadius = getPlanetDotRadius(p);
+        const pr = getPlanetDotRadiusPx(p);
         ctx.beginPath();
         ctx.fillStyle = p.color;
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 10;
         ctx.shadowColor = p.color;
-        ctx.arc(xPx, yPx, dotRadius, 0, Math.PI * 2);
+        ctx.arc(x, y, pr, 0, Math.PI*2);
         ctx.fill();
         ctx.shadowBlur = 0;
-      });
+      }
 
-      // Subtle outer frame
+      // Outer ring to frame the instrument
       ctx.beginPath();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-      ctx.lineWidth = 0.5;
-      ctx.arc(cx, cy, Math.min(cx, cy) - 6, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 0.8;
+      ctx.arc(cx, cy, Math.min(cx, cy) - 6, 0, Math.PI*2);
       ctx.stroke();
 
       requestAnimationFrame(draw);
     }
+
+    // Initial HUD
+    zoomText.textContent = `${zoomFactor.toFixed(2)}×`;
 
     draw();
   </script>

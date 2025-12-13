@@ -1,351 +1,427 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Helios · Nouveau Orrery</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Helios Nouveau Orrery</title>
+  <style>
+    :root{
+      --bg: #000;
+      --text: #fff;
 
-<style>
-:root{
-  --gold: rgba(255,215,0,0.9);
-  --gold-soft: rgba(255,215,0,0.18);
-  --sage: rgba(140,255,205,0.18);
-  --peach: rgba(255,198,160,0.22);
-}
+      /* Theme */
+      --gold: rgba(255, 215, 0, 0.85);
+      --gold-soft: rgba(255, 215, 0, 0.18);
+      --gold-faint: rgba(255, 215, 0, 0.12);
 
-html, body{
-  margin:0;
-  padding:0;
-  width:100%;
-  height:100%;
-  background:#000;
-  color:#fff;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  overflow:hidden;
-}
+      --sage: rgba(140, 255, 205, 0.18);
+      --sage-strong: rgba(140, 255, 205, 0.30);
+      --blush: rgba(255, 210, 185, 0.16);
+      --sky: rgba(185, 210, 255, 0.14);
 
-#wrapper{
-  position:fixed;
-  inset:0;
-  display:grid;
-  place-items:center;
-  background:
-    radial-gradient(circle at center, #141414 0%, #060606 50%, #000 80%);
-}
+      --panel: rgba(17,17,17,0.86);
+      --panel-border: rgba(255,215,0,0.22);
+      --panel-border-strong: rgba(255,215,0,0.38);
+    }
 
-/* ================= CARD FRAME ================= */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
 
-#frameCard{
-  position:relative;
-  width:min(92vmin, 880px);
-  aspect-ratio: 1 / 1;
-  padding:26px;
-}
+    #wrapper {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at center, #141414 0%, #060606 45%, #000 75%),
+        radial-gradient(circle at 15% 20%, rgba(140,255,205,0.06) 0%, transparent 35%),
+        radial-gradient(circle at 85% 25%, rgba(255,210,185,0.05) 0%, transparent 35%),
+        radial-gradient(circle at 20% 85%, rgba(185,210,255,0.05) 0%, transparent 40%);
+    }
 
-#cardBorder{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  z-index:1;
-  pointer-events:none;
-  filter: drop-shadow(0 0 14px rgba(255,215,0,0.12));
-}
+    /* NEW: Panel wrapper for border + veil + content */
+    #frameCard{
+      position: relative;
+      width: min(92vmin, 860px);
+      /* gives breathing room so the floral border doesn't collide with header/canvas */
+      padding: 22px;
+      border-radius: 26px;
+    }
 
-#cardInner{
-  position:relative;
-  z-index:2;
-  width:100%;
-  height:100%;
-  border-radius:28px;
-  padding:14px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  background:
-    radial-gradient(circle at center, #111 0%, #050505 70%);
-  border:1px solid rgba(255,215,0,0.14);
-  box-shadow:
-    inset 0 0 28px rgba(255,215,0,0.05),
-    0 0 22px rgba(255,215,0,0.08);
-}
+    /* Content sits above panel overlays */
+    #content {
+      position: relative;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
 
-/* ================= HEADER ================= */
+    #header {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 12px;
+      background: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.25));
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      box-shadow:
+        0 0 22px rgba(255,215,0,0.10),
+        inset 0 0 24px rgba(255,215,0,0.05);
+      backdrop-filter: blur(2px);
+    }
 
-#header{
-  text-align:center;
-  margin-bottom:8px;
-}
+    h1 {
+      margin: 0;
+      font-weight: 500;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      font-size: 13px;
+      text-align: center;
+      opacity: 0.95;
+    }
 
-#header h1{
-  margin:0;
-  font-size:13px;
-  letter-spacing:0.22em;
-  font-weight:500;
-  text-transform:uppercase;
-}
+    #subtitle {
+      font-size: 11px;
+      opacity: 0.72;
+      text-align: center;
+      margin-top: -2px;
+    }
 
-#subtitle{
-  font-size:11px;
-  opacity:0.7;
-  margin-top:4px;
-}
+    #controls {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 10px;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      opacity: 0.9;
+    }
 
-/* ================= CONTROLS ================= */
+    #controls label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      border: 1px solid rgba(255,215,0,0.18);
+      border-radius: 10px;
+      background: rgba(0,0,0,0.35);
+    }
 
-#controls{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  justify-content:center;
-  margin:8px 0;
-  font-size:11px;
-}
+    #controls input[type="date"],
+    #controls select {
+      background: rgba(15,15,15,0.9);
+      border: 1px solid rgba(255,215,0,0.18);
+      color: #fff;
+      padding: 4px 6px;
+      border-radius: 8px;
+      font-size: 11px;
+      outline: none;
+    }
 
-#controls label,
-#controls button{
-  background:#111;
-  border:1px solid rgba(255,215,0,0.25);
-  border-radius:10px;
-  padding:6px 8px;
-  color:#fff;
-}
+    #controls button {
+      background: rgba(15,15,15,0.75);
+      border: 1px solid rgba(255,215,0,0.26);
+      color: #fff;
+      padding: 6px 9px;
+      border-radius: 10px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: transform 0.06s ease, background 0.15s ease, border-color 0.15s ease;
+    }
+    #controls button:hover {
+      background: rgba(30,30,30,0.85);
+      border-color: rgba(255,215,0,0.55);
+    }
+    #controls button:active {
+      transform: translateY(1px);
+    }
 
-#controls input,
-#controls select{
-  background:#000;
-  border:1px solid rgba(255,215,0,0.25);
-  color:#fff;
-  font-size:11px;
-  border-radius:6px;
-  padding:2px 4px;
-}
+    #canvas {
+      width: min(92vmin, 820px);
+      height: min(92vmin, 820px);
+      border-radius: 50%;
+      background: radial-gradient(circle at center, #111 0%, #000 62%);
+      border: 1px solid rgba(255, 215, 0, 0.18);
+      box-shadow:
+        0 0 25px rgba(255, 215, 0, 0.16),
+        0 0 80px rgba(140, 255, 205, 0.04),
+        inset 0 0 35px rgba(255, 215, 0, 0.06);
+    }
 
-#controls button{
-  cursor:pointer;
-}
-#controls button:hover{
-  background:#222;
-}
+    #hud {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 11px;
+      opacity: 0.82;
+      padding: 8px 12px;
+      border-radius: 14px;
+      background: rgba(0,0,0,0.32);
+      border: 1px solid rgba(255,215,0,0.16);
+      box-shadow: inset 0 0 18px rgba(255,215,0,0.05);
+    }
 
-/* ================= CANVAS ================= */
+    #hud .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
 
-#canvas{
-  width:100%;
-  flex:1;
-  border-radius:50%;
-  border:1px solid rgba(255,215,0,0.2);
-  box-shadow:
-    0 0 26px rgba(255,215,0,0.18),
-    inset 0 0 30px rgba(255,215,0,0.08);
-}
+    #legend {
+      width: 100%;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      font-size: 11px;
+      opacity: 0.82;
+      padding-bottom: 4px;
+    }
 
-/* ================= HUD ================= */
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,215,0,0.14);
+      background: rgba(0,0,0,0.25);
+    }
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
 
-#hud{
-  display:flex;
-  justify-content:space-between;
-  width:100%;
-  font-size:11px;
-  opacity:0.75;
-  margin-top:6px;
-}
+    /* Planet colors */
+    .sun     { background: #ffd700; }
+    .mercury { background: #c0c0c0; }
+    .venus   { background: #ffbf7f; }
+    .earth   { background: #4cc9f0; }
+    .mars    { background: #ff6b6b; }
+    .jupiter { background: #ffdd99; }
+    .saturn  { background: #f4e285; }
+    .uranus  { background: #7fffd4; }
+    .neptune { background: #6c5ce7; }
+    .pluto   { background: #b388ff; }
 
-.pill{
-  padding:4px 8px;
-}
+    /* UPDATED: veil + frame now attach to #frameCard (not viewport) */
+    #nouveauVeil{
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.14;
+      border-radius: 26px;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(140,255,205,0.20) 0 10px, transparent 11px),
+        radial-gradient(circle at 18% 26%, rgba(255,210,185,0.16) 0 8px, transparent 9px),
+        radial-gradient(circle at 86% 22%, rgba(185,210,255,0.16) 0 9px, transparent 10px),
+        radial-gradient(circle at 78% 84%, rgba(140,255,205,0.16) 0 10px, transparent 11px),
+        radial-gradient(circle at 22% 78%, rgba(255,210,185,0.14) 0 10px, transparent 11px);
+      mix-blend-mode: screen;
+    }
 
-/* ================= SVG BORDER ================= */
-svg path, svg circle{
-  vector-effect: non-scaling-stroke;
-}
-</style>
+    #nouveauFrame {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0.98;
+      filter: drop-shadow(0 0 18px rgba(255,215,0,0.10));
+    }
+
+    @media (max-width: 560px){
+      #hud { flex-direction: column; align-items: center; }
+    }
+  </style>
 </head>
 
 <body>
-<div id="wrapper">
+  <div id="wrapper">
 
-  <div id="frameCard">
+    <div id="frameCard">
+      <div id="nouveauVeil" aria-hidden="true"></div>
 
-    <!-- ART NOUVEAU BORDER -->
-    <svg id="cardBorder" viewBox="0 0 1000 1000" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="goldStroke" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="rgba(255,215,0,0.4)"/>
-          <stop offset="0.5" stop-color="rgba(255,215,0,1)"/>
-          <stop offset="1" stop-color="rgba(255,245,185,0.6)"/>
-        </linearGradient>
+      <!-- Art Nouveau Frame (panel-sized SVG) -->
+      <svg id="nouveauFrame" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="goldStroke" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="rgba(255,215,0,0.30)"/>
+            <stop offset="0.35" stop-color="rgba(255,215,0,0.95)"/>
+            <stop offset="0.7" stop-color="rgba(255,245,170,0.60)"/>
+            <stop offset="1" stop-color="rgba(255,215,0,0.85)"/>
+          </linearGradient>
 
-        <radialGradient id="leaf" cx="40%" cy="40%" r="70%">
-          <stop offset="0" stop-color="var(--sage)"/>
-          <stop offset="1" stop-color="rgba(140,255,205,0.05)"/>
-        </radialGradient>
+          <radialGradient id="leafGreen" cx="40%" cy="40%" r="70%">
+            <stop offset="0" stop-color="rgba(140,255,205,0.28)"/>
+            <stop offset="1" stop-color="rgba(140,255,205,0.06)"/>
+          </radialGradient>
+          <radialGradient id="petalBlush" cx="40%" cy="40%" r="75%">
+            <stop offset="0" stop-color="rgba(255,210,185,0.22)"/>
+            <stop offset="1" stop-color="rgba(255,210,185,0.05)"/>
+          </radialGradient>
+          <radialGradient id="petalSky" cx="40%" cy="40%" r="75%">
+            <stop offset="0" stop-color="rgba(185,210,255,0.18)"/>
+            <stop offset="1" stop-color="rgba(185,210,255,0.05)"/>
+          </radialGradient>
 
-        <radialGradient id="petal" cx="40%" cy="40%" r="70%">
-          <stop offset="0" stop-color="var(--peach)"/>
-          <stop offset="1" stop-color="rgba(255,198,160,0.05)"/>
-        </radialGradient>
-      </defs>
+          <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="1.2" result="b"/>
+            <feMerge>
+              <feMergeNode in="b"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
 
-      <!-- outer rails -->
-      <rect x="28" y="28" width="944" height="944" rx="40"
-            fill="none" stroke="rgba(255,215,0,0.22)" stroke-width="2"/>
-      <rect x="54" y="54" width="892" height="892" rx="32"
-            fill="none" stroke="rgba(255,215,0,0.12)" stroke-width="1.2"/>
+          <!-- FIX: Define the reusable corner ornament ONCE -->
+          <g id="cornerTL">
+            <path d="M70,150 C105,120 130,95 165,70 C145,120 125,155 90,190 C75,175 65,165 70,150 Z"
+                  fill="url(#leafGreen)" stroke="url(#goldStroke)" stroke-width="1.6"/>
+            <path d="M95,105 C120,90 150,80 185,78 C155,105 130,135 105,165 C92,142 88,125 95,105 Z"
+                  fill="url(#leafGreen)" stroke="url(#goldStroke)" stroke-width="1.4" opacity="0.9"/>
 
-      <!-- corner floral (TL) -->
-      <g transform="translate(0,0)">
-        <path d="M70,220 C70,120 160,70 240,70
-                 C320,70 360,140 350,210
-                 C340,270 270,310 210,290
-                 C160,270 150,230 180,210
-                 C210,185 250,205 230,235
-                 C210,265 175,250 180,225"
-              fill="none" stroke="url(#goldStroke)" stroke-width="3"/>
+            <path d="M140,160 C165,145 190,120 200,95 C215,125 210,155 190,180 C172,175 155,170 140,160 Z"
+                  fill="url(#petalBlush)" stroke="url(#goldStroke)" stroke-width="1.2" opacity="0.9"/>
+            <path d="M155,140 C180,130 205,110 220,86 C232,116 228,150 210,170 C192,165 173,155 155,140 Z"
+                  fill="url(#petalSky)" stroke="url(#goldStroke)" stroke-width="1.0" opacity="0.85"/>
 
-        <path d="M150,170 C120,145 110,110 110,90
-                 C140,105 165,130 185,160 Z"
-              fill="url(#leaf)" stroke="url(#goldStroke)" stroke-width="1.2"/>
+            <path d="M70,240 C120,210 150,190 210,170
+                     C260,152 300,120 330,80"
+                  fill="none" stroke="url(#goldStroke)" stroke-width="2.2" stroke-linecap="round" opacity="0.85"/>
+            <path d="M120,240 C95,255 85,275 98,290
+                     C110,305 140,300 142,280
+                     C144,260 120,255 112,270"
+                  fill="none" stroke="url(#goldStroke)" stroke-width="1.6" opacity="0.75"/>
+            <path d="M210,170 C190,205 200,230 230,240
+                     C265,252 290,230 280,205
+                     C270,180 238,180 236,205"
+                  fill="none" stroke="url(#goldStroke)" stroke-width="1.4" opacity="0.65"/>
 
-        <path d="M215,210 C240,185 270,180 290,195
-                 C265,225 235,255 210,265 Z"
-              fill="url(#petal)" stroke="url(#goldStroke)" stroke-width="1.1"/>
-      </g>
+            <circle cx="205" cy="205" r="7" fill="rgba(255,215,0,0.22)" stroke="url(#goldStroke)" stroke-width="1.2"/>
+            <circle cx="205" cy="205" r="2.2" fill="rgba(255,215,0,0.85)"/>
+          </g>
+        </defs>
 
-      <!-- mirror corners -->
-      <g transform="translate(1000,0) scale(-1,1)"><use href="#"/></g>
-      <g transform="translate(0,1000) scale(1,-1)"><use href="#"/></g>
-      <g transform="translate(1000,1000) scale(-1,-1)"><use href="#"/></g>
+        <rect x="22" y="22" width="956" height="956" rx="42" ry="42"
+              fill="none" stroke="url(#goldStroke)" stroke-width="2" opacity="0.75"/>
+        <rect x="48" y="48" width="904" height="904" rx="34" ry="34"
+              fill="none" stroke="rgba(255,215,0,0.25)" stroke-width="1.5"/>
 
-      <!-- side vines -->
-      <path d="M300,70 C360,40 420,40 480,70
-               C540,100 600,100 660,70"
-            fill="none" stroke="url(#goldStroke)" stroke-width="2"/>
+        <g opacity="0.95" filter="url(#softGlow)">
+          <g transform="translate(0,0)">
+            <use href="#cornerTL"/>
+          </g>
+          <g transform="translate(1000,0) scale(-1,1)">
+            <use href="#cornerTL"/>
+          </g>
+          <g transform="translate(0,1000) scale(1,-1)">
+            <use href="#cornerTL"/>
+          </g>
+          <g transform="translate(1000,1000) scale(-1,-1)">
+            <use href="#cornerTL"/>
+          </g>
+        </g>
 
-      <path d="M300,930 C360,960 420,960 480,930
-               C540,900 600,900 660,930"
-            fill="none" stroke="url(#goldStroke)" stroke-width="2"/>
+        <g opacity="0.75" filter="url(#softGlow)">
+          <path d="M210,60
+                   C260,88 290,88 340,60
+                   C390,32 420,32 470,60
+                   C520,88 550,88 600,60
+                   C650,32 680,32 730,60
+                   C780,88 810,88 860,60"
+                fill="none" stroke="url(#goldStroke)" stroke-width="1.5" stroke-linecap="round"/>
 
-    </svg>
+          <path d="M210,940
+                   C260,912 290,912 340,940
+                   C390,968 420,968 470,940
+                   C520,912 550,912 600,940
+                   C650,968 680,968 730,940
+                   C780,912 810,912 860,940"
+                fill="none" stroke="url(#goldStroke)" stroke-width="1.5" stroke-linecap="round"/>
 
-    <!-- ================= CONTENT ================= -->
-    <div id="cardInner">
+          <path d="M60,210
+                   C88,260 88,290 60,340
+                   C32,390 32,420 60,470
+                   C88,520 88,550 60,600
+                   C32,650 32,680 60,730
+                   C88,780 88,810 60,860"
+                fill="none" stroke="url(#goldStroke)" stroke-width="1.5" stroke-linecap="round"/>
 
-      <div id="header">
-        <h1>HELIOS · NOUVEAU ORRERY</h1>
-        <div id="subtitle">Platonic clockwork · Real-time & historical</div>
+          <path d="M940,210
+                   C912,260 912,290 940,340
+                   C968,390 968,420 940,470
+                   C912,520 912,550 940,600
+                   C968,650 968,680 940,730
+                   C912,780 912,810 940,860"
+                fill="none" stroke="url(#goldStroke)" stroke-width="1.5" stroke-linecap="round"/>
+        </g>
+      </svg>
+
+      <div id="content">
+        <div id="header">
+          <h1>HELIOS · NOUVEAU ORRERY</h1>
+          <div id="subtitle">Art Nouveau frame · Platonic-face clockwork · Real-time + historical</div>
+
+          <div id="controls">
+            <label>
+              Date:
+              <input type="date" id="datePicker" />
+            </label>
+
+            <label>
+              Time flow:
+              <select id="speedSelect">
+                <option value="realtime">Real-time</option>
+                <option value="hour">1 hour / sec</option>
+                <option value="day">1 day / sec</option>
+                <option value="month">1 month / sec</option>
+                <option value="year">1 year / sec</option>
+                <option value="century">1 century / sec</option>
+              </select>
+            </label>
+
+            <button id="todayBtn">Today (Live)</button>
+
+            <button id="zoomOut">−</button>
+            <button id="zoomIn">+</button>
+          </div>
+        </div>
+
+        <canvas id="canvas"></canvas>
+
+        <div id="hud">
+          <div class="pill"><span style="opacity:.75;">Sim date:</span> <span id="simDateText">—</span></div>
+          <div class="pill"><span style="opacity:.75;">Zoom:</span> <span id="zoomText">1.00×</span></div>
+          <div class="pill"><span style="opacity:.75;">Mode:</span> <span id="modeText">Live</span></div>
+        </div>
+
+        <div id="legend"></div>
       </div>
-
-      <div id="controls">
-        <label>Date <input type="date" id="datePicker"></label>
-        <label>Speed
-          <select id="speed">
-            <option value="realtime">Live</option>
-            <option value="day">1 day/sec</option>
-            <option value="year">1 year/sec</option>
-            <option value="century">1 century/sec</option>
-          </select>
-        </label>
-        <button id="today">Today</button>
-        <button id="zoomOut">−</button>
-        <button id="zoomIn">+</button>
-      </div>
-
-      <canvas id="canvas"></canvas>
-
-      <div id="hud">
-        <div class="pill" id="dateText">—</div>
-        <div class="pill" id="zoomText">1.00×</div>
-      </div>
-
     </div>
   </div>
-</div>
 
-<script>
-/* ================= BASIC ORRERY (SIMPLIFIED) ================= */
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
 
-function resize(){
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-}
-window.addEventListener("resize", resize);
-resize();
-
-let zoom = 1;
-let simDate = null;
-let speed = "realtime";
-
-const AU_SCALE = 80;
-
-const planets = [
-  {name:"Mercury", r:0.39, c:"#c0c0c0", p:88},
-  {name:"Venus", r:0.72, c:"#ffbf7f", p:225},
-  {name:"Earth", r:1.00, c:"#4cc9f0", p:365},
-  {name:"Mars", r:1.52, c:"#ff6b6b", p:687},
-  {name:"Jupiter", r:5.2, c:"#ffdd99", p:4333}
-];
-
-function jd(d){ return d.getTime()/86400000 + 2440587.5 }
-
-document.getElementById("zoomIn").onclick=()=>zoom*=1.2;
-document.getElementById("zoomOut").onclick=()=>zoom/=1.2;
-document.getElementById("today").onclick=()=>simDate=null;
-document.getElementById("speed").onchange=e=>speed=e.target.value;
-document.getElementById("datePicker").onchange=e=>{
-  simDate = new Date(e.target.value+"T00:00:00Z");
-};
-
-let last = performance.now();
-
-function loop(t){
-  const dt = (t-last)/1000; last=t;
-  const now = simDate ? new Date(simDate) : new Date();
-  if(simDate){
-    if(speed==="day") simDate.setUTCDate(simDate.getUTCDate()+dt);
-    if(speed==="year") simDate.setUTCFullYear(simDate.getUTCFullYear()+dt);
-    if(speed==="century") simDate.setUTCFullYear(simDate.getUTCFullYear()+dt*100);
-  }
-
-  document.getElementById("dateText").textContent = now.toISOString().slice(0,10);
-  document.getElementById("zoomText").textContent = zoom.toFixed(2)+"×";
-
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  const cx = canvas.clientWidth/2;
-  const cy = canvas.clientHeight/2;
-
-  // sun
-  ctx.fillStyle="#ffd700";
-  ctx.beginPath();
-  ctx.arc(cx,cy,6,0,Math.PI*2);
-  ctx.fill();
-
-  planets.forEach(p=>{
-    const ang = ((jd(now)%p.p)/p.p)*Math.PI*2;
-    const r = p.r*AU_SCALE*zoom;
-    const x = cx + Math.cos(ang)*r;
-    const y = cy + Math.sin(ang)*r;
-
-    ctx.strokeStyle="rgba(255,215,0,0.12)";
-    ctx.beginPath();
-    ctx.arc(cx,cy,r,0,Math.PI*2);
-    ctx.stroke();
-
-    ctx.fillStyle=p.c;
-    ctx.beginPath();
-    ctx.arc(x,y,3,0,Math.PI*2);
-    ctx.fill();
-  });
-
-  requestAnimationFrame(loop);
-}
-requestAnimationFrame(loop);
-</script>
-
-</body>
-</html>
+    const datePicker = document.getElementById('datePicker');
+    const todayBtn = document.getElementById('todayBtn');
+    const zoomInBtn = document.getElementById('zoomIn');
+    const zoomOutBtn = document.getElementById('zoomOut');
+    const speedSelect = document.getElementById('speedSelect');

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Helios Platonic Orbital Clock</title>
+  <title>Helios + Zodiac Wheel (Geocentric Approx)</title>
   <style>
     html, body {
       margin: 0;
@@ -18,26 +18,20 @@
       position: fixed;
       inset: 0;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
       background: #000;
     }
 
-    /* PURE CSS BORDER ONLY — NO SVG */
+    /* Pure CSS border frame */
     #card {
       position: relative;
-      width: min(92vmin, 900px);
-      padding: 26px 26px 18px;
+      width: min(95vmin, 1100px);
+      padding: 22px 22px 16px;
       border-radius: 22px;
       box-sizing: border-box;
-
       background: transparent;
-
-      /* outer border */
       border: 2px solid rgba(255, 215, 0, 0.65);
-
-      /* inner border (inset ring) + soft glow */
       box-shadow:
         inset 0 0 0 1.3px rgba(255, 215, 0, 0.22),
         0 0 28px rgba(255, 215, 0, 0.12);
@@ -47,7 +41,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-bottom: 6px;
+      margin-bottom: 10px;
     }
 
     h1 {
@@ -62,8 +56,9 @@
     #subtitle {
       font-size: 11px;
       opacity: 0.7;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       text-align: center;
+      max-width: 900px;
     }
 
     #controls {
@@ -73,7 +68,7 @@
       align-items: center;
       justify-content: center;
       font-size: 11px;
-      opacity: 0.85;
+      opacity: 0.88;
     }
 
     #controls label {
@@ -110,30 +105,54 @@
 
     #controls .zoom-label {
       margin-left: 4px;
+      opacity: 0.9;
     }
 
-    #canvas {
+    /* Two canvases side-by-side */
+    #panes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: center;
+      justify-items: center;
+      margin-top: 6px;
+    }
+
+    .pane {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .pane-title {
+      font-size: 11px;
+      opacity: 0.8;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    canvas {
       border-radius: 50%;
-      max-width: min(90vmin, 800px);
-      max-height: min(90vmin, 800px);
-      box-shadow: 0 0 30px rgba(255, 215, 0, 0.25),
-                  0 0 80px rgba(255, 215, 0, 0.12);
+      width: min(42vmin, 460px);
+      height: min(42vmin, 460px);
+      box-shadow: 0 0 30px rgba(255, 215, 0, 0.22),
+                  0 0 80px rgba(255, 215, 0, 0.10);
       background: radial-gradient(circle at center, #111 0%, #000 60%);
+      display: block;
     }
 
-    /* NEW: fixed grid legend in rows of 3 */
+    /* Legend: fixed grid rows of 3 */
     #legend {
-      position: absolute;
-      bottom: 18px;
-      left: 50%;
-      transform: translateX(-50%);
+      margin-top: 10px;
       font-size: 11px;
       opacity: 0.85;
 
       display: grid;
       grid-template-columns: repeat(3, auto);
       gap: 6px 16px;
-      justify-items: start;
+      justify-content: center;
       align-items: center;
       text-align: left;
     }
@@ -163,6 +182,12 @@
     .uranus  { background: #7fffd4; }
     .neptune { background: #6c5ce7; }
     .pluto   { background: #b388ff; }
+
+    @media (max-width: 860px) {
+      #panes { grid-template-columns: 1fr; }
+      canvas { width: min(72vmin, 520px); height: min(72vmin, 520px); }
+      #card { width: min(96vmin, 980px); }
+    }
   </style>
 </head>
 
@@ -171,15 +196,17 @@
     <div id="card">
 
       <div id="header">
-        <h1>HELIOS PLATONIC ORBITAL CLOCK</h1>
+        <h1>HELIOS + ZODIAC WHEEL</h1>
         <div id="subtitle">
-          Sun · Mercury · Venus · Earth · Mars · Jupiter · Saturn · Uranus · Neptune · Pluto
+          Left: heliocentric orbits. Right: zodiac wheel using Level-2 geocentric approximation (planet − Earth).
         </div>
+
         <div id="controls">
           <label>
             Date:
             <input type="date" id="datePicker" />
           </label>
+
           <label>
             Time flow:
             <select id="speedSelect">
@@ -191,45 +218,71 @@
               <option value="century">1 century / sec</option>
             </select>
           </label>
+
           <button id="todayBtn">Today (Live)</button>
-          <span class="zoom-label">Zoom:</span>
+
+          <span class="zoom-label">Helios Zoom:</span>
           <button id="zoomIn">+</button>
           <button id="zoomOut">−</button>
+
+          <span class="zoom-label">Wheel Zoom:</span>
+          <button id="wheelZoomIn">+</button>
+          <button id="wheelZoomOut">−</button>
         </div>
       </div>
 
-      <canvas id="canvas"></canvas>
-      <div id="legend"></div>
+      <div id="panes">
+        <div class="pane">
+          <div class="pane-title">Heliocentric</div>
+          <canvas id="canvasHelios"></canvas>
+        </div>
 
+        <div class="pane">
+          <div class="pane-title">Zodiac Wheel (Geocentric)</div>
+          <canvas id="canvasZodiac"></canvas>
+        </div>
+      </div>
+
+      <div id="legend"></div>
     </div>
   </div>
 
   <script>
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
+    const canvasHelios = document.getElementById('canvasHelios');
+    const ctxH = canvasHelios.getContext('2d');
+
+    const canvasZodiac = document.getElementById('canvasZodiac');
+    const ctxZ = canvasZodiac.getContext('2d');
 
     const datePicker = document.getElementById('datePicker');
     const todayBtn = document.getElementById('todayBtn');
     const zoomInBtn = document.getElementById('zoomIn');
     const zoomOutBtn = document.getElementById('zoomOut');
+    const wheelZoomInBtn = document.getElementById('wheelZoomIn');
+    const wheelZoomOutBtn = document.getElementById('wheelZoomOut');
     const speedSelect = document.getElementById('speedSelect');
 
     let selectedDate = null;
-    let zoomFactor = 1.0;
+    let zoomFactor = 1.0;       // Helios zoom
+    let wheelZoom = 1.0;        // Zodiac wheel zoom
     let simJD = null;
     let lastFrameTime = null;
     let speedMode = 'realtime';
 
-    function resizeCanvas() {
-      const size = Math.min(window.innerWidth, window.innerHeight) * 0.8;
-      canvas.width = size;
-      canvas.height = size;
+    function resizeCanvases() {
+      // Match the CSS-rendered size so drawing is crisp
+      [canvasHelios, canvasZodiac].forEach(c => {
+        const rect = c.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        c.width = Math.max(2, Math.floor(rect.width * dpr));
+        c.height = Math.max(2, Math.floor(rect.height * dpr));
+      });
     }
     window.addEventListener('resize', () => {
-      resizeCanvas();
+      resizeCanvases();
       lastFrameTime = null;
     });
-    resizeCanvas();
+    resizeCanvases();
 
     function getJulianDate(date) {
       return date.getTime() / 86400000 + 2440587.5;
@@ -267,7 +320,7 @@
                 L0:-55.12002969,LDot:218.45945325, wBar0:44.96476227,wBarDot:-0.32241464, Omega0:131.78422574,OmegaDot:-0.00508664 }
     };
 
-    /* NEW: deterministic legend ordering + grid rows of 3 */
+    // Legend order in rows of 3
     const legendOrder = [
       ['Sun'],
       ['Mercury', 'Venus', 'Earth'],
@@ -275,22 +328,16 @@
       ['Neptune', 'Uranus'],
       ['Pluto']
     ];
-
     const legend = document.getElementById('legend');
     legend.innerHTML = '';
-
     legendOrder.flat().forEach(name => {
       const p = planetConfigs.find(x => x.name === name);
-
       const item = document.createElement('div');
       item.className = 'legend-item';
-
       const dot = document.createElement('div');
       dot.className = 'legend-dot ' + p.name.toLowerCase();
-
       const label = document.createElement('span');
       label.textContent = p.name;
-
       item.appendChild(dot);
       item.appendChild(label);
       legend.appendChild(item);
@@ -323,6 +370,18 @@
     zoomOutBtn.addEventListener('click', () => {
       zoomFactor /= 1.2;
       if (zoomFactor < 0.2) zoomFactor = 0.2;
+      lastFrameTime = null;
+    });
+
+    wheelZoomInBtn.addEventListener('click', () => {
+      wheelZoom *= 1.15;
+      if (wheelZoom > 4) wheelZoom = 4;
+      lastFrameTime = null;
+    });
+
+    wheelZoomOutBtn.addEventListener('click', () => {
+      wheelZoom /= 1.15;
+      if (wheelZoom < 0.4) wheelZoom = 0.4;
       lastFrameTime = null;
     });
 
@@ -400,6 +459,7 @@
       const x1 =  cosW * xPrime - sinW * yPrime;
       const y1 =  sinW * xPrime + cosW * yPrime;
 
+      // NOTE: This is a simplified 2D-ish projection that matches your original behavior.
       const xEcl = x1 * cosO - y1 * sinO * cosI;
       const yEcl = x1 * sinO + y1 * cosO * cosI;
 
@@ -414,12 +474,302 @@
       return { x: r * Math.cos(angle), y: r * Math.sin(angle), a: config.meanAU };
     }
 
-    function draw() {
-      const w = canvas.width;
-      const h = canvas.height;
+    function normalizeAngleRad(a) {
+      a = a % (2 * Math.PI);
+      if (a < 0) a += 2 * Math.PI;
+      return a;
+    }
+
+    // Zodiac helpers
+    const zodiac = [
+      { name: 'Aries', symbol: '♈' },
+      { name: 'Taurus', symbol: '♉' },
+      { name: 'Gemini', symbol: '♊' },
+      { name: 'Cancer', symbol: '♋' },
+      { name: 'Leo', symbol: '♌' },
+      { name: 'Virgo', symbol: '♍' },
+      { name: 'Libra', symbol: '♎' },
+      { name: 'Scorpio', symbol: '♏' },
+      { name: 'Sagittarius', symbol: '♐' },
+      { name: 'Capricorn', symbol: '♑' },
+      { name: 'Aquarius', symbol: '♒' },
+      { name: 'Pisces', symbol: '♓' }
+    ];
+
+    // Map ecliptic longitude (0 at +x axis) to screen angle:
+    // We want 0° Aries at TOP. In canvas, 0 rad points to +x (right),
+    // and positive angle is clockwise if we use y-down. We'll convert manually.
+    function lonToCanvasAngle(lonRad) {
+      // Convert: lon 0 at right -> want 0 at top => subtract 90°
+      // Also flip so increasing lon goes counterclockwise on screen (math style).
+      // Canvas y is down; to make CCW, we negate.
+      const a = -(lonRad - Math.PI / 2);
+      return a;
+    }
+
+    function drawZodiacWheel(jd, positionsHelio) {
+      const w = canvasZodiac.width;
+      const h = canvasZodiac.height;
       const cx = w / 2;
       const cy = h / 2;
 
+      ctxZ.clearRect(0, 0, w, h);
+
+      // Base radius
+      const baseR = (Math.min(cx, cy) - 18) * wheelZoom;
+
+      // Subtle center glow
+      const glow = ctxZ.createRadialGradient(cx, cy, 0, cx, cy, baseR * 0.45);
+      glow.addColorStop(0, 'rgba(255, 215, 0, 0.25)');
+      glow.addColorStop(0.6, 'rgba(255, 215, 0, 0.06)');
+      glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctxZ.fillStyle = glow;
+      ctxZ.beginPath();
+      ctxZ.arc(cx, cy, baseR * 0.55, 0, Math.PI * 2);
+      ctxZ.fill();
+
+      // Wheel rings
+      ctxZ.beginPath();
+      ctxZ.strokeStyle = 'rgba(255,215,0,0.22)';
+      ctxZ.lineWidth = 2;
+      ctxZ.arc(cx, cy, baseR, 0, Math.PI * 2);
+      ctxZ.stroke();
+
+      ctxZ.beginPath();
+      ctxZ.strokeStyle = 'rgba(255,215,0,0.12)';
+      ctxZ.lineWidth = 1;
+      ctxZ.arc(cx, cy, baseR * 0.84, 0, Math.PI * 2);
+      ctxZ.stroke();
+
+      // 12 sectors
+      for (let i = 0; i < 12; i++) {
+        const lon0 = i * (2 * Math.PI / 12);
+        const a = lonToCanvasAngle(lon0);
+
+        ctxZ.beginPath();
+        ctxZ.strokeStyle = 'rgba(255,255,255,0.10)';
+        ctxZ.lineWidth = 1;
+        ctxZ.moveTo(cx, cy);
+        ctxZ.lineTo(cx + Math.cos(a) * baseR, cy + Math.sin(a) * baseR);
+        ctxZ.stroke();
+
+        // Sign label position (mid-sector)
+        const lonMid = lon0 + (Math.PI / 12);
+        const am = lonToCanvasAngle(lonMid);
+        const tx = cx + Math.cos(am) * (baseR * 0.92);
+        const ty = cy + Math.sin(am) * (baseR * 0.92);
+
+        ctxZ.font = `${Math.max(10, Math.floor(12 * (window.devicePixelRatio || 1)))}px system-ui`;
+        ctxZ.fillStyle = 'rgba(255,215,0,0.75)';
+        ctxZ.textAlign = 'center';
+        ctxZ.textBaseline = 'middle';
+        ctxZ.fillText(zodiac[i].symbol, tx, ty);
+      }
+
+      // Degree ticks every 10°
+      for (let deg = 0; deg < 360; deg += 10) {
+        const lon = deg * Math.PI / 180;
+        const a = lonToCanvasAngle(lon);
+        const r1 = baseR * 0.98;
+        const r2 = (deg % 30 === 0) ? baseR * 0.90 : baseR * 0.94;
+
+        ctxZ.beginPath();
+        ctxZ.strokeStyle = (deg % 30 === 0) ? 'rgba(255,215,0,0.22)' : 'rgba(255,255,255,0.08)';
+        ctxZ.lineWidth = (deg % 30 === 0) ? 1.6 : 1;
+        ctxZ.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+        ctxZ.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+        ctxZ.stroke();
+      }
+
+      // Geocentric longitudes (Level 2): planet - Earth
+      const earth = positionsHelio['Earth'];
+      const geo = {};
+      planetConfigs.forEach(p => {
+        if (p.name === 'Earth') return;
+
+        if (p.name === 'Sun') {
+          // Sun as seen from Earth is opposite Earth's heliocentric vector:
+          // r_geo_sun = -r_helio_earth
+          const gx = -earth.x;
+          const gy = -earth.y;
+          geo[p.name] = { x: gx, y: gy, lon: normalizeAngleRad(Math.atan2(gy, gx)) };
+          return;
+        }
+
+        const hp = positionsHelio[p.name];
+        if (!hp) return;
+        const gx = hp.x - earth.x;
+        const gy = hp.y - earth.y;
+        geo[p.name] = { x: gx, y: gy, lon: normalizeAngleRad(Math.atan2(gy, gx)) };
+      });
+
+      // Plot markers on a ring
+      const markerR = baseR * 0.78;
+
+      function drawMarker(name, color, lon, radiusPx, label) {
+        const a = lonToCanvasAngle(lon);
+        const x = cx + Math.cos(a) * markerR;
+        const y = cy + Math.sin(a) * markerR;
+
+        // marker dot
+        ctxZ.beginPath();
+        ctxZ.fillStyle = color;
+        ctxZ.shadowBlur = 10;
+        ctxZ.shadowColor = color;
+        ctxZ.arc(x, y, radiusPx, 0, Math.PI * 2);
+        ctxZ.fill();
+        ctxZ.shadowBlur = 0;
+
+        // small tick inward
+        ctxZ.beginPath();
+        ctxZ.strokeStyle = 'rgba(255,215,0,0.35)';
+        ctxZ.lineWidth = 1;
+        ctxZ.moveTo(x, y);
+        ctxZ.lineTo(cx + Math.cos(a) * (markerR * 0.93), cy + Math.sin(a) * (markerR * 0.93));
+        ctxZ.stroke();
+
+        // label
+        ctxZ.font = `${Math.max(9, Math.floor(10 * (window.devicePixelRatio || 1)))}px system-ui`;
+        ctxZ.fillStyle = 'rgba(255,255,255,0.85)';
+        ctxZ.textAlign = (Math.cos(a) > 0) ? 'left' : 'right';
+        ctxZ.textBaseline = 'middle';
+        const lx = x + (Math.cos(a) > 0 ? 10 : -10);
+        const ly = y;
+
+        // show degree-in-sign
+        const lonDeg = lon * 180 / Math.PI;
+        const signIndex = Math.floor(lonDeg / 30);
+        const degIntoSign = lonDeg - signIndex * 30;
+
+        const txt = `${label} ${zodiac[signIndex].symbol} ${degIntoSign.toFixed(0)}°`;
+        ctxZ.fillText(txt, lx, ly);
+      }
+
+      // marker sizing
+      function markerSize(name) {
+        if (name === 'Sun') return 7;
+        if (name === 'Jupiter' || name === 'Saturn') return 6;
+        return 5;
+      }
+
+      // Draw in a pleasant order (Sun, inner planets, outer)
+      const order = ['Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto'];
+      order.forEach(n => {
+        const p = planetConfigs.find(x => x.name === n);
+        const g = geo[n];
+        if (!p || !g) return;
+        drawMarker(n, p.color, g.lon, markerSize(n) * (window.devicePixelRatio || 1) * 0.6, n);
+      });
+
+      // Center point
+      ctxZ.beginPath();
+      ctxZ.fillStyle = 'rgba(255,215,0,0.35)';
+      ctxZ.arc(cx, cy, 3.2 * (window.devicePixelRatio || 1), 0, Math.PI * 2);
+      ctxZ.fill();
+    }
+
+    function drawHelios(jd, positions) {
+      const w = canvasHelios.width;
+      const h = canvasHelios.height;
+      const cx = w / 2;
+      const cy = h / 2;
+
+      ctxH.clearRect(0, 0, w, h);
+
+      const maxAU = 50;
+      const scale = (Math.min(cx, cy) - 40) * zoomFactor / maxAU;
+
+      const glow = ctxH.createRadialGradient(cx, cy, 0, cx, cy, 80 * zoomFactor);
+      glow.addColorStop(0, 'rgba(255, 215, 0, 0.6)');
+      glow.addColorStop(0.4, 'rgba(255, 215, 0, 0.15)');
+      glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctxH.fillStyle = glow;
+      ctxH.beginPath();
+      ctxH.arc(cx, cy, 80 * zoomFactor, 0, Math.PI * 2);
+      ctxH.fill();
+
+      // Orbits
+      planetConfigs.forEach(p => {
+        if (p.name === 'Sun') return;
+        const orbitRadiusPx = p.meanAU * scale;
+        ctxH.beginPath();
+        ctxH.strokeStyle = 'rgba(255, 215, 0, 0.15)';
+        ctxH.lineWidth = 1;
+        ctxH.arc(cx, cy, orbitRadiusPx, 0, Math.PI * 2);
+        ctxH.stroke();
+      });
+
+      // Bodies + polygon traces
+      planetConfigs.forEach(p => {
+        if (p.name === 'Sun') {
+          const sunRadius = 8 * (window.devicePixelRatio || 1) * 0.6;
+          ctxH.beginPath();
+          ctxH.fillStyle = p.color;
+          ctxH.shadowBlur = 20;
+          ctxH.shadowColor = p.color;
+          ctxH.arc(cx, cy, sunRadius, 0, Math.PI * 2);
+          ctxH.fill();
+          ctxH.shadowBlur = 0;
+          return;
+        }
+
+        const pos = positions[p.name];
+        if (!pos) return;
+
+        const xAU = pos.x;
+        const yAU = pos.y;
+        const rAU = Math.sqrt(xAU * xAU + yAU * yAU);
+
+        const xPx = cx + xAU * scale;
+        const yPx = cy + yAU * scale;
+
+        // Polygon face trace
+        const sides = getSidesFromFace(p.faceType);
+        if (sides >= 3) {
+          const baseAngle = Math.atan2(yAU, xAU);
+          ctxH.beginPath();
+          ctxH.strokeStyle = 'rgba(255, 215, 0, 0.85)';
+          ctxH.lineWidth = 0.9;
+          for (let i = 0; i <= sides; i++) {
+            const theta = baseAngle + (i * 2 * Math.PI / sides);
+            const vx = cx + rAU * Math.cos(theta) * scale;
+            const vy = cy + rAU * Math.sin(theta) * scale;
+            if (i === 0) ctxH.moveTo(vx, vy);
+            else ctxH.lineTo(vx, vy);
+          }
+          ctxH.stroke();
+        }
+
+        // Planet dot
+        const dotRadius = getPlanetDotRadius(p) * (window.devicePixelRatio || 1) * 0.6;
+        ctxH.beginPath();
+        ctxH.fillStyle = p.color;
+        ctxH.shadowBlur = 8;
+        ctxH.shadowColor = p.color;
+        ctxH.arc(xPx, yPx, dotRadius, 0, Math.PI * 2);
+        ctxH.fill();
+        ctxH.shadowBlur = 0;
+      });
+
+      // Outer subtle ring
+      ctxH.beginPath();
+      ctxH.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctxH.lineWidth = 0.5;
+      ctxH.arc(cx, cy, Math.min(cx, cy) - 6, 0, Math.PI * 2);
+      ctxH.stroke();
+    }
+
+    function computeHelioPositions(jd) {
+      const positions = {};
+      planetConfigs.forEach(p => {
+        if (p.type === 'kepler') positions[p.name] = getKeplerXY(p.name, jd);
+        else if (p.type === 'plutoSimple') positions[p.name] = getPlutoXY(p, jd);
+      });
+      // Sun not needed in positions map (always at origin)
+      return positions;
+    }
+
+    function draw() {
       const nowPerf = performance.now() / 1000;
       if (lastFrameTime === null) lastFrameTime = nowPerf;
       const dtReal = nowPerf - lastFrameTime;
@@ -436,88 +786,10 @@
         jd = simJD;
       }
 
-      ctx.clearRect(0, 0, w, h);
+      const helioPositions = computeHelioPositions(jd);
 
-      const maxAU = 50;
-      const scale = (Math.min(cx, cy) - 40) * zoomFactor / maxAU;
-
-      const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80 * zoomFactor);
-      glow.addColorStop(0, 'rgba(255, 215, 0, 0.6)');
-      glow.addColorStop(0.4, 'rgba(255, 215, 0, 0.15)');
-      glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 80 * zoomFactor, 0, Math.PI * 2);
-      ctx.fill();
-
-      const positions = {};
-      planetConfigs.forEach(p => {
-        if (p.type === 'kepler') positions[p.name] = getKeplerXY(p.name, jd);
-        else if (p.type === 'plutoSimple') positions[p.name] = getPlutoXY(p, jd);
-      });
-
-      planetConfigs.forEach(p => {
-        if (p.name === 'Sun') return;
-        const orbitRadiusPx = p.meanAU * scale;
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255, 215, 0, 0.15)';
-        ctx.lineWidth = 1;
-        ctx.arc(cx, cy, orbitRadiusPx, 0, Math.PI * 2);
-        ctx.stroke();
-      });
-
-      planetConfigs.forEach(p => {
-        if (p.name === 'Sun') {
-          const sunRadius = getPlanetDotRadius(p);
-          ctx.beginPath();
-          ctx.fillStyle = p.color;
-          ctx.shadowBlur = 20;
-          ctx.shadowColor = p.color;
-          ctx.arc(cx, cy, sunRadius, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.shadowBlur = 0;
-          return;
-        }
-
-        const pos = positions[p.name];
-        const xAU = pos.x;
-        const yAU = pos.y;
-        const rAU = Math.sqrt(xAU * xAU + yAU * yAU);
-
-        const xPx = cx + xAU * scale;
-        const yPx = cy + yAU * scale;
-
-        const sides = getSidesFromFace(p.faceType);
-        if (sides >= 3) {
-          const baseAngle = Math.atan2(yAU, xAU);
-          ctx.beginPath();
-          ctx.strokeStyle = 'rgba(255, 215, 0, 0.85)';
-          ctx.lineWidth = 0.9;
-          for (let i = 0; i <= sides; i++) {
-            const theta = baseAngle + (i * 2 * Math.PI / sides);
-            const vx = cx + rAU * Math.cos(theta) * scale;
-            const vy = cy + rAU * Math.sin(theta) * scale;
-            if (i === 0) ctx.moveTo(vx, vy);
-            else ctx.lineTo(vx, vy);
-          }
-          ctx.stroke();
-        }
-
-        const dotRadius = getPlanetDotRadius(p);
-        ctx.beginPath();
-        ctx.fillStyle = p.color;
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = p.color;
-        ctx.arc(xPx, yPx, dotRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-      });
-
-      ctx.beginPath();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-      ctx.lineWidth = 0.5;
-      ctx.arc(cx, cy, Math.min(cx, cy) - 6, 0, Math.PI * 2);
-      ctx.stroke();
+      drawHelios(jd, helioPositions);
+      drawZodiacWheel(jd, helioPositions);
 
       requestAnimationFrame(draw);
     }

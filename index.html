@@ -650,7 +650,7 @@
       });
 
       // Plot markers on a ring (keep marker sizes unchanged)
-      const markerR = baseR * 0.33;
+      const markerR = baseR * 0.5;
 
       function markerSize(name) {
         if (name === 'Sun') return 7;
@@ -685,7 +685,7 @@
         ctxZ.fillStyle = 'rgba(255,255,255,0.85)';
         ctxZ.textAlign = (Math.cos(a) > 0) ? 'left' : 'right';
         ctxZ.textBaseline = 'middle';
-        const lx = x + (Math.cos(a) > 0 ? 10 : -10);
+        const lx = x + (Math.cos(a) > 0 ? 14 : -14);
         const ly = y;
 
         const lonDeg = lon * 180 / Math.PI;

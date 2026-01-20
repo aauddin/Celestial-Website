@@ -588,7 +588,7 @@
       ctxZ.stroke();
 
       // 12 sectors + SIGN LABELS (3x larger than before)
-      const signFontPx = Math.max(10, Math.floor(12 * (window.devicePixelRatio || 1))) * 3;
+      const signFontPx = Math.max(10, Math.floor(12 * (window.devicePixelRatio || 1))) * 1.5;
 
       for (let i = 0; i < 12; i++) {
         const lon0 = i * (2 * Math.PI / 12);
@@ -650,7 +650,7 @@
       });
 
       // Plot markers on a ring (keep marker sizes unchanged)
-      const markerR = baseR * 0.78;
+      const markerR = baseR * 0.66;
 
       function markerSize(name) {
         if (name === 'Sun') return 7;

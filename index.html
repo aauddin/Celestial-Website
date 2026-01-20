@@ -32,7 +32,6 @@
       border-radius: 22px;
       box-sizing: border-box;
 
-      /* no interior panel texture */
       background: transparent;
 
       /* outer border */
@@ -122,29 +121,35 @@
       background: radial-gradient(circle at center, #111 0%, #000 60%);
     }
 
+    /* NEW: fixed grid legend in rows of 3 */
     #legend {
       position: absolute;
       bottom: 18px;
       left: 50%;
       transform: translateX(-50%);
       font-size: 11px;
-      opacity: 0.8;
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      justify-content: center;
+      opacity: 0.85;
+
+      display: grid;
+      grid-template-columns: repeat(3, auto);
+      gap: 6px 16px;
+      justify-items: start;
+      align-items: center;
+      text-align: left;
     }
 
     .legend-item {
       display: flex;
       align-items: center;
       gap: 4px;
+      white-space: nowrap;
     }
 
     .legend-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
+      flex: 0 0 auto;
     }
 
     /* Planet colors */
@@ -262,14 +267,30 @@
                 L0:-55.12002969,LDot:218.45945325, wBar0:44.96476227,wBarDot:-0.32241464, Omega0:131.78422574,OmegaDot:-0.00508664 }
     };
 
+    /* NEW: deterministic legend ordering + grid rows of 3 */
+    const legendOrder = [
+      ['Sun'],
+      ['Mercury', 'Venus', 'Earth'],
+      ['Mars', 'Jupiter', 'Saturn'],
+      ['Neptune', 'Uranus'],
+      ['Pluto']
+    ];
+
     const legend = document.getElementById('legend');
-    planetConfigs.forEach(p => {
+    legend.innerHTML = '';
+
+    legendOrder.flat().forEach(name => {
+      const p = planetConfigs.find(x => x.name === name);
+
       const item = document.createElement('div');
       item.className = 'legend-item';
+
       const dot = document.createElement('div');
       dot.className = 'legend-dot ' + p.name.toLowerCase();
+
       const label = document.createElement('span');
       label.textContent = p.name;
+
       item.appendChild(dot);
       item.appendChild(label);
       legend.appendChild(item);

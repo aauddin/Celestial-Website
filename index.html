@@ -108,7 +108,7 @@
       opacity: 0.9;
     }
 
-    /* NEW: live timestamp line */
+    /* live timestamp line */
     #statusbar{
       margin-top: 6px;
       font-size: 11px;
@@ -250,9 +250,14 @@
           <span class="zoom-label">Wheel Zoom:</span>
           <button id="wheelZoomIn">+</button>
           <button id="wheelZoomOut">−</button>
+
+          <!-- NEW: toggle planet labels on the geocentric wheel -->
+          <label style="gap:6px;">
+            <input type="checkbox" id="toggleWheelLabels" checked />
+            Wheel labels
+          </label>
         </div>
 
-        <!-- NEW: live readout -->
         <div id="statusbar">
           <span class="chip" id="statusDate">DATE: —</span>
           <span class="chip" id="statusTime">TIME: —</span>
@@ -295,6 +300,13 @@
     const statusTime = document.getElementById('statusTime');
     const statusMode = document.getElementById('statusMode');
 
+    // NEW: toggle for geocentric wheel planet labels
+    const toggleWheelLabels = document.getElementById('toggleWheelLabels');
+    let showWheelLabels = true;
+    toggleWheelLabels.addEventListener('change', () => {
+      showWheelLabels = toggleWheelLabels.checked;
+    });
+
     let selectedDate = null;
     let zoomFactor = 1.0;       // Helios zoom
     let wheelZoom = 1.0;        // Zodiac wheel zoom
@@ -321,13 +333,11 @@
     }
 
     function jdToDate(jd) {
-      // JD to Unix ms: (jd - 2440587.5) days * ms/day
       const ms = (jd - 2440587.5) * 86400000;
       return new Date(ms);
     }
 
     function fmtDate(d) {
-      // YYYY-MM-DD
       const y = d.getUTCFullYear();
       const m = String(d.getUTCMonth() + 1).padStart(2, '0');
       const day = String(d.getUTCDate()).padStart(2, '0');
@@ -335,7 +345,6 @@
     }
 
     function fmtTime(d) {
-      // HH:MM:SS UTC
       const hh = String(d.getUTCHours()).padStart(2, '0');
       const mm = String(d.getUTCMinutes()).padStart(2, '0');
       const ss = String(d.getUTCSeconds()).padStart(2, '0');
@@ -587,8 +596,9 @@
       ctxZ.arc(cx, cy, baseR * 0.84, 0, Math.PI * 2);
       ctxZ.stroke();
 
-      // 12 sectors + SIGN LABELS (3x larger than before)
-      const signFontPx = Math.max(10, Math.floor(12 * (window.devicePixelRatio || 1))) * 1.5;
+      // 12 sectors + sign labels
+      // "as you described": larger than before, with your later tweak baked in
+      const signFontPx = Math.max(10, Math.floor(12 * (window.devicePixelRatio || 1))) * 2.2;
 
       for (let i = 0; i < 12; i++) {
         const lon0 = i * (2 * Math.PI / 12);
@@ -649,8 +659,8 @@
         geo[p.name] = { x: gx, y: gy, lon: normalizeAngleRad(Math.atan2(gy, gx)) };
       });
 
-      // Plot markers on a ring (keep marker sizes unchanged)
-      const markerR = baseR * 0.5;
+      // Plot markers on a ring (pulled inward for label breathing room)
+      const markerR = baseR * 0.66;
 
       function markerSize(name) {
         if (name === 'Sun') return 7;
@@ -680,11 +690,14 @@
         ctxZ.lineTo(cx + Math.cos(a) * (markerR * 0.93), cy + Math.sin(a) * (markerR * 0.93));
         ctxZ.stroke();
 
+        if (!showWheelLabels) return;
+
         // label
         ctxZ.font = `${Math.max(9, Math.floor(10 * (window.devicePixelRatio || 1)))}px system-ui`;
         ctxZ.fillStyle = 'rgba(255,255,255,0.85)';
         ctxZ.textAlign = (Math.cos(a) > 0) ? 'left' : 'right';
         ctxZ.textBaseline = 'middle';
+
         const lx = x + (Math.cos(a) > 0 ? 14 : -14);
         const ly = y;
 
